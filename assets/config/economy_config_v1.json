@@ -1,0 +1,372 @@
+{
+  "version": 7,
+  "starting_cash_minor": 5000000,
+  "holding_company_cost_minor": 2500000,
+  "subsidiary_company_cost_minor": 2500000,
+  "low_cash_threshold_minor": 500000,
+  "max_active_loans": 2,
+  "max_offline_hours_rewarded": 720,
+  "offline_efficiency": [
+    { "from_hours": 0, "to_hours": 72, "multiplier": 1.0 },
+    { "from_hours": 72, "to_hours": 120, "multiplier": 0.8 },
+    { "from_hours": 120, "to_hours": 168, "multiplier": 0.6 },
+    { "from_hours": 168, "to_hours": 336, "multiplier": 0.4 },
+    { "from_hours": 336, "to_hours": null, "multiplier": 0.2 }
+  ],
+  "company_limits": [
+    { "player_level": 1, "max_companies": 2 },
+    { "player_level": 5, "max_companies": 3 },
+    { "player_level": 10, "max_companies": 5 },
+    { "player_level": 25, "max_companies": 8 },
+    { "player_level": 50, "max_companies": 12 }
+  ],
+  "rank_milestones": [
+    { "rank": 1, "required_subsidiaries": 0, "required_net_worth_minor": 0 },
+    { "rank": 5, "required_subsidiaries": 1, "required_net_worth_minor": 3000000 },
+    { "rank": 10, "required_subsidiaries": 2, "required_net_worth_minor": 12000000 },
+    { "rank": 25, "required_subsidiaries": 4, "required_net_worth_minor": 50000000 }
+  ],
+  "upgrade_tracks": [
+    {
+      "id": "operations",
+      "display_name": "Operations",
+      "max_level": 5,
+      "revenue_bonus_per_level": 0.05,
+      "expense_bonus_per_level": 0.02,
+      "base_cost_minor": 60000,
+      "cost_multiplier_per_level": 1.4
+    },
+    {
+      "id": "marketing",
+      "display_name": "Marketing",
+      "max_level": 5,
+      "revenue_bonus_per_level": 0.07,
+      "expense_bonus_per_level": 0.03,
+      "base_cost_minor": 75000,
+      "cost_multiplier_per_level": 1.45
+    },
+    {
+      "id": "staff",
+      "display_name": "Staff",
+      "max_level": 5,
+      "revenue_bonus_per_level": 0.04,
+      "expense_bonus_per_level": 0.04,
+      "base_cost_minor": 55000,
+      "cost_multiplier_per_level": 1.35
+    },
+    {
+      "id": "quality",
+      "display_name": "Quality",
+      "max_level": 5,
+      "revenue_bonus_per_level": 0.06,
+      "expense_bonus_per_level": 0.025,
+      "base_cost_minor": 70000,
+      "cost_multiplier_per_level": 1.42
+    },
+    {
+      "id": "expansion",
+      "display_name": "Expansion",
+      "max_level": 3,
+      "revenue_bonus_per_level": 0.08,
+      "expense_bonus_per_level": 0.05,
+      "base_cost_minor": 120000,
+      "cost_multiplier_per_level": 1.55
+    }
+  ],
+  "activities": [
+    {
+      "id": "serve_customers",
+      "display_name": "Serve customers",
+      "reward_minor": 15000,
+      "cooldown_seconds": 8,
+      "applies_to": "subsidiary"
+    },
+    {
+      "id": "optimize_workflow",
+      "display_name": "Optimize workflow",
+      "reward_minor": 25000,
+      "cooldown_seconds": 15,
+      "applies_to": "subsidiary"
+    },
+    {
+      "id": "launch_campaign",
+      "display_name": "Launch campaign",
+      "reward_minor": 40000,
+      "cooldown_seconds": 30,
+      "applies_to": "subsidiary"
+    }
+  ],
+  "managers": [
+    {
+      "id": "ceo",
+      "display_name": "CEO",
+      "description": "Leads strategy and automates operational tasks.",
+      "hire_cost_minor": 100000,
+      "salary_per_hour_minor": 4000,
+      "revenue_multiplier": 1.12,
+      "expense_multiplier": 1.0,
+      "automates_tasks": true,
+      "applies_to": "subsidiary"
+    },
+    {
+      "id": "cfo",
+      "display_name": "CFO",
+      "description": "Optimizes finances and lowers operating costs.",
+      "hire_cost_minor": 90000,
+      "salary_per_hour_minor": 3800,
+      "revenue_multiplier": 1.0,
+      "expense_multiplier": 0.88,
+      "automates_tasks": false,
+      "applies_to": "subsidiary"
+    },
+    {
+      "id": "cmo",
+      "display_name": "CMO",
+      "description": "Drives marketing growth and brand reach.",
+      "hire_cost_minor": 85000,
+      "salary_per_hour_minor": 3600,
+      "revenue_multiplier": 1.15,
+      "expense_multiplier": 1.02,
+      "automates_tasks": false,
+      "applies_to": "subsidiary"
+    },
+    {
+      "id": "hr_manager",
+      "display_name": "HR Manager",
+      "description": "Improves retention and reduces HR overhead.",
+      "hire_cost_minor": 70000,
+      "salary_per_hour_minor": 3200,
+      "revenue_multiplier": 1.03,
+      "expense_multiplier": 0.94,
+      "automates_tasks": false,
+      "applies_to": "subsidiary"
+    },
+    {
+      "id": "coo",
+      "display_name": "COO",
+      "description": "Runs daily operations and automates workflows.",
+      "hire_cost_minor": 80000,
+      "salary_per_hour_minor": 3500,
+      "revenue_multiplier": 1.06,
+      "expense_multiplier": 0.96,
+      "automates_tasks": true,
+      "applies_to": "subsidiary"
+    }
+  ],
+  "market_events": [
+    {
+      "id": "local_boom",
+      "display_name": "Local boom",
+      "revenue_multiplier": 1.15,
+      "expense_multiplier": 1.0,
+      "duration_hours": 24,
+      "weight": 10
+    },
+    {
+      "id": "staff_shortage",
+      "display_name": "Staff shortage",
+      "revenue_multiplier": 0.92,
+      "expense_multiplier": 1.08,
+      "duration_hours": 18,
+      "weight": 8
+    },
+    {
+      "id": "supplier_discount",
+      "display_name": "Supplier discount",
+      "revenue_multiplier": 1.0,
+      "expense_multiplier": 0.9,
+      "duration_hours": 12,
+      "weight": 6
+    },
+    {
+      "id": "energy_price_spike",
+      "display_name": "Energy price spike",
+      "revenue_multiplier": 1.0,
+      "expense_multiplier": 1.12,
+      "duration_hours": 20,
+      "weight": 7,
+      "affects_industry_ids": ["cafe", "auto_repair", "ecommerce"]
+    },
+    {
+      "id": "tax_rule_change",
+      "display_name": "Tax rule change",
+      "revenue_multiplier": 0.95,
+      "expense_multiplier": 1.05,
+      "duration_hours": 48,
+      "weight": 5
+    },
+    {
+      "id": "viral_campaign",
+      "display_name": "Viral campaign",
+      "revenue_multiplier": 1.20,
+      "expense_multiplier": 1.03,
+      "duration_hours": 16,
+      "weight": 6,
+      "affects_industry_ids": ["ecommerce", "cafe"]
+    },
+    {
+      "id": "ai_boom",
+      "display_name": "AI boom",
+      "revenue_multiplier": 1.18,
+      "expense_multiplier": 1.04,
+      "duration_hours": 24,
+      "weight": 5,
+      "affects_industry_ids": ["software"]
+    },
+    {
+      "id": "real_estate_boom",
+      "display_name": "Real estate boom",
+      "revenue_multiplier": 1.14,
+      "expense_multiplier": 0.98,
+      "duration_hours": 36,
+      "weight": 4,
+      "affects_industry_ids": ["real_estate"]
+    }
+  ],
+  "automation_levels": [
+    {
+      "level": 1,
+      "upgrade_cost_minor": 75000,
+      "revenue_multiplier": 1.08,
+      "expense_multiplier": 1.02
+    },
+    {
+      "level": 2,
+      "upgrade_cost_minor": 150000,
+      "revenue_multiplier": 1.15,
+      "expense_multiplier": 1.05
+    },
+    {
+      "level": 3,
+      "upgrade_cost_minor": 300000,
+      "revenue_multiplier": 1.22,
+      "expense_multiplier": 1.08
+    }
+  ],
+  "loan_products": [
+    {
+      "id": "starter_loan",
+      "display_name": "Starter loan",
+      "max_amount_minor": 500000,
+      "interest_rate_hourly": 0.00001712,
+      "duration_hours": 168
+    },
+    {
+      "id": "growth_loan",
+      "display_name": "Growth loan",
+      "max_amount_minor": 1500000,
+      "interest_rate_hourly": 0.00001712,
+      "duration_hours": 336
+    }
+  ],
+  "acquisition_targets": [
+    {
+      "id": "cafe_micro_chain",
+      "display_name": "Micro café chain",
+      "cost_minor": 1500000,
+      "revenue_boost_per_hour_minor": 20000,
+      "min_business_rank": 10,
+      "industry_id": "cafe"
+    },
+    {
+      "id": "software_saas_bundle",
+      "display_name": "SaaS client bundle",
+      "cost_minor": 3000000,
+      "revenue_boost_per_hour_minor": 45000,
+      "min_business_rank": 25,
+      "industry_id": "software"
+    }
+  ],
+  "industries": [
+    {
+      "id": "cafe",
+      "display_name": "Café",
+      "icon_name": "cafe",
+      "tagline": "Steady foot traffic",
+      "focus_hint": "Tasks and early COO",
+      "accent_color": "#f5a623",
+      "preferred_track_id": "operations",
+      "start_cost_minor": 2500000,
+      "base_revenue_per_hour_minor": 120000,
+      "base_expenses_per_hour_minor": 70000,
+      "risk_profile": 0.2,
+      "automation_potential": 0.5,
+      "min_business_rank": 1
+    },
+    {
+      "id": "cleaning",
+      "display_name": "Städbolag",
+      "icon_name": "sparkles",
+      "tagline": "Reliable contracts",
+      "focus_hint": "Automation and volume",
+      "accent_color": "#00ff88",
+      "preferred_track_id": "staff",
+      "start_cost_minor": 2500000,
+      "base_revenue_per_hour_minor": 90000,
+      "base_expenses_per_hour_minor": 55000,
+      "risk_profile": 0.35,
+      "automation_potential": 0.35,
+      "min_business_rank": 1
+    },
+    {
+      "id": "auto_repair",
+      "display_name": "Bilverkstad",
+      "icon_name": "car-sport",
+      "tagline": "Service margins",
+      "focus_hint": "Operations track upgrades",
+      "accent_color": "#ff3366",
+      "preferred_track_id": "operations",
+      "start_cost_minor": 2500000,
+      "base_revenue_per_hour_minor": 110000,
+      "base_expenses_per_hour_minor": 75000,
+      "risk_profile": 0.35,
+      "automation_potential": 0.45,
+      "min_business_rank": 5
+    },
+    {
+      "id": "ecommerce",
+      "display_name": "E-handel",
+      "icon_name": "cart",
+      "tagline": "Scale online",
+      "focus_hint": "CMO and automation",
+      "accent_color": "#7b61ff",
+      "preferred_track_id": "marketing",
+      "start_cost_minor": 2500000,
+      "base_revenue_per_hour_minor": 140000,
+      "base_expenses_per_hour_minor": 95000,
+      "risk_profile": 0.55,
+      "automation_potential": 0.75,
+      "min_business_rank": 5
+    },
+    {
+      "id": "software",
+      "display_name": "Programmeringsfirma",
+      "icon_name": "code-slash",
+      "tagline": "High growth, volatile",
+      "focus_hint": "CEO/CMO and level progression",
+      "accent_color": "#00e5ff",
+      "preferred_track_id": "marketing",
+      "start_cost_minor": 2500000,
+      "base_revenue_per_hour_minor": 150000,
+      "base_expenses_per_hour_minor": 80000,
+      "risk_profile": 0.4,
+      "automation_potential": 0.8,
+      "min_business_rank": 10
+    },
+    {
+      "id": "real_estate",
+      "display_name": "Fastigheter",
+      "icon_name": "business",
+      "tagline": "Stable, capital-heavy",
+      "focus_hint": "CFO and low-risk growth",
+      "accent_color": "#f59e0b",
+      "preferred_track_id": "expansion",
+      "start_cost_minor": 2500000,
+      "base_revenue_per_hour_minor": 180000,
+      "base_expenses_per_hour_minor": 60000,
+      "risk_profile": 0.15,
+      "automation_potential": 0.7,
+      "min_business_rank": 10
+    }
+  ]
+}

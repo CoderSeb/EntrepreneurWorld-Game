@@ -1,0 +1,30 @@
+{
+  "expo": {
+    "name": "Entrepreneur World",
+    "slug": "business-empire",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "businessempire",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#060b14"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.businessempire.game"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#060b14"
+      },
+      "package": "com.businessempire.game"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      "expo-asset",
+      "expo-secure-store"
+    ]
+  }
+}
