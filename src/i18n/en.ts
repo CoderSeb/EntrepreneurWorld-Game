@@ -47,6 +47,20 @@ export const en = {
     market: 'MARKET',
     exec: 'EXEC',
   },
+  header: {
+    perSecond: '/sec',
+    nextPayout: 'Next tick',
+    nextPayoutMeta: '{seconds}s',
+    backendOffline: 'API offline',
+  },
+  industries: {
+    cafe: 'Café',
+    cleaning: 'Cleaning company',
+    auto_repair: 'Auto repair shop',
+    ecommerce: 'E-commerce',
+    software: 'Software agency',
+    real_estate: 'Real estate',
+  },
   onboarding: {
     welcomeKicker: 'WELCOME TO',
     title: 'ENTREPRENEUR\nWORLD',
@@ -152,6 +166,9 @@ export const en = {
     saveHint: 'Writes local save and syncs cloud when connected',
     cloudSyncAction: 'Cloud sync',
     accountDeletionAction: 'Account deletion',
+    reconnect: 'Retry connection',
+    reconnectHint: 'Start API with pwsh ./scripts/run-api-with-postgres.ps1',
+    reconnectAction: 'Reconnect to API',
   },
   company: {
     notFoundTitle: 'Company not found',
@@ -187,6 +204,14 @@ export const en = {
     noTasksTitle: 'No tasks',
     noTasksMessage: 'Tasks unlock as the company levels up.',
     taskReward: '· +{reward}',
+    employeesTitle: 'Workforce',
+    employeesSubtitle: 'More staff raises revenue slowly — hiring too fast can burn cash',
+    employeeCount: 'Employees',
+    payrollLevel: 'Pay level',
+    employeeLimit: '{count}/{max} staff · level {level} cap',
+    marginalProfit: 'Next hire: {amount}/hr net',
+    marginalLoss: 'Next hire: {amount}/hr loss',
+    hireFailedTitle: 'Could not hire',
   },
   foundCompany: {
     alertTitle: 'Could not found company',
@@ -206,8 +231,10 @@ export const en = {
   executive: {
     revenueBoost: '+{percent}% revenue · ',
     expenseReduction: '-{percent}% costs · ',
-    salaryLine: 'Hire {hireCost} · {salary}/hr',
+    salaryLine: 'Hire {hireCost} · {salary}/hr · {hours}h contract',
     hireRole: 'HIRE {role}',
+    contractExpires: 'Contract ends in {hours}h',
+    insufficientFunds: 'Not enough cash to hire this executive',
   },
   task: {
     cooldown: 'COOLDOWN {seconds}s',

@@ -39,6 +39,7 @@ export default function ExecScreen() {
     saveNow,
     syncCloudNow,
     deleteAccount,
+    reconnectBackend,
     displayCurrency,
     setDisplayCurrency,
     locale,
@@ -145,6 +146,21 @@ export default function ExecScreen() {
           </View>
         ) : null}
         {backendStatus.lastError ? <Text style={styles.backendError}>{backendStatus.lastError}</Text> : null}
+        {backendStatus.enabled && !backendStatus.connected ? (
+          <>
+            <Text style={styles.backendHint}>{t.exec.reconnectHint}</Text>
+            <PrimaryButton
+              label={busy ? t.common.syncing : t.exec.reconnectAction}
+              onPress={() =>
+                run(reconnectBackend, t.exec.reconnectAction, {
+                  complete: interpolate(t.common.actionComplete, { title: t.exec.reconnectAction }),
+                  failed: interpolate(t.common.actionFailed, { title: t.exec.reconnectAction }),
+                })
+              }
+              disabled={busy || deletingAccount}
+            />
+          </>
+        ) : null}
         {backendStatus.welcomeTitle ? <Text style={styles.welcomeBanner}>{backendStatus.welcomeTitle}</Text> : null}
         {backendStatus.cloudSaveEnabled && backendStatus.connected ? (
           <PrimaryButton
@@ -323,6 +339,7 @@ const styles = StyleSheet.create({
   statusOk: { color: colors.success },
   statusWarn: { color: colors.warning },
   backendError: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.danger },
+  backendHint: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, lineHeight: 16 },
   welcomeBanner: { fontFamily: fonts.body, fontSize: fontSizes.sm, color: colors.primary },
   loanRow: {
     backgroundColor: colors.surface,

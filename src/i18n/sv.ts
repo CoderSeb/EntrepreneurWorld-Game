@@ -49,6 +49,20 @@ export const sv: TranslationDictionary = {
     market: 'MARKNAD',
     exec: 'LEDNING',
   },
+  header: {
+    perSecond: '/sek',
+    nextPayout: 'Nästa tick',
+    nextPayoutMeta: '{seconds}s',
+    backendOffline: 'API offline',
+  },
+  industries: {
+    cafe: 'Café',
+    cleaning: 'Städbolag',
+    auto_repair: 'Bilverkstad',
+    ecommerce: 'E-handel',
+    software: 'Programmeringsfirma',
+    real_estate: 'Fastigheter',
+  },
   onboarding: {
     welcomeKicker: 'VÄLKOMMEN TILL',
     title: 'ENTREPRENEUR\nWORLD',
@@ -154,6 +168,9 @@ export const sv: TranslationDictionary = {
     saveHint: 'Skriver lokal save och synkar moln när ansluten',
     cloudSyncAction: 'Molnsynk',
     accountDeletionAction: 'Kontoradering',
+    reconnect: 'Försök igen',
+    reconnectHint: 'Starta API med pwsh ./scripts/run-api-with-postgres.ps1',
+    reconnectAction: 'Återanslut till API',
   },
   company: {
     notFoundTitle: 'Bolag hittades inte',
@@ -189,6 +206,14 @@ export const sv: TranslationDictionary = {
     noTasksTitle: 'Inga uppgifter',
     noTasksMessage: 'Uppgifter låses upp när bolaget går upp i nivå.',
     taskReward: '· +{reward}',
+    employeesTitle: 'Personal',
+    employeesSubtitle: 'Fler anställda höjer intäkten långsamt — anställ inte för snabbt',
+    employeeCount: 'Anställda',
+    payrollLevel: 'Lönenivå',
+    employeeLimit: '{count}/{max} personal · nivå {level}-tak',
+    marginalProfit: 'Nästa anställning: {amount}/tim netto',
+    marginalLoss: 'Nästa anställning: {amount}/tim förlust',
+    hireFailedTitle: 'Kunde inte anställa',
   },
   foundCompany: {
     alertTitle: 'Kunde inte grunda bolag',
@@ -208,8 +233,10 @@ export const sv: TranslationDictionary = {
   executive: {
     revenueBoost: '+{percent}% intäkt · ',
     expenseReduction: '-{percent}% kostnader · ',
-    salaryLine: 'Anställ {hireCost} · {salary}/tim',
+    salaryLine: 'Anställ {hireCost} · {salary}/tim · {hours}h kontrakt',
     hireRole: 'ANSTÄLL {role}',
+    contractExpires: 'Kontrakt slutar om {hours}h',
+    insufficientFunds: 'Inte tillräckligt med kontanter för att anställa',
   },
   task: {
     cooldown: 'COOLDOWN {seconds}s',

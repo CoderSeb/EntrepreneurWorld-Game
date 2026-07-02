@@ -2,6 +2,8 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { EconomyConfig, getIndustryFoundingCost, getUpgradeTrack, IndustryDefinition } from '@/domain/config/EconomyConfig';
 import { resolveIndustryPresentation } from '@/domain/config/IndustryPresentation';
+import { getIndustryLabel } from '@/i18n/industryLabels';
+import { useTranslation } from '@/i18n';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
@@ -20,6 +22,7 @@ export function SectorSelectCard({
   onPress,
   formatRevenue,
 }: SectorSelectCardProps) {
+  const { t } = useTranslation();
   const presentation = resolveIndustryPresentation(industry);
   const iconName = presentation.iconName as keyof typeof Ionicons.glyphMap;
   const trackName =
@@ -39,7 +42,7 @@ export function SectorSelectCard({
         },
       ]}>
       <Ionicons name={iconName in Ionicons.glyphMap ? iconName : 'business'} size={22} color={presentation.accentColor} />
-      <Text style={styles.title}>{industry.displayName}</Text>
+      <Text style={styles.title}>{getIndustryLabel(industry.id, t)}</Text>
       <Text style={styles.tagline}>{presentation.tagline}</Text>
       <Text style={styles.stats}>
         {formatRevenue(industry.baseRevenuePerHourMinor)}/hr · {presentation.marginPercent}% margin

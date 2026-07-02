@@ -12,6 +12,7 @@ import { EmptyState } from '@/components/EmptyState';
 import { ExecutiveRoleCard } from '@/components/ExecutiveRoleCard';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
+import { MAX_PAYROLL_LEVEL, MIN_PAYROLL_LEVEL } from '@/domain/companies/EmployeeService';
 
 export default function CompanyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -24,6 +25,8 @@ export default function CompanyDetailScreen() {
     getCompanyExecutiveRoles,
     upgradeCompanyTrack,
     upgradeCompanyAutomation,
+    adjustCompanyEmployees,
+    setCompanyPayrollLevel,
     formatMoneyCompact,
     playerCashMinor,
   } = useGame();
@@ -101,6 +104,45 @@ export default function CompanyDetailScreen() {
     }
     setUpgradeError(null);
   };
+
+  const handleHireExecutive = (roleId: string, hireCostMinor: number) => {
+    if (playerCashMinor < hireCostMinor) {
+      Alert.alert(t.company.hireFailedTitle, t.executive.insufficientFunds);
+      return;
+    }
+    const result = hireExecutiveRole(company.id, roleId);
+    if (!result.success) {
+      Alert.alert(t.company.hireFailedTitle, result.errorMessage);
+    }
+  };
+
+  const handleEmployeeDelta = (delta: number) => {
+    const result = adjustCompanyEmployees(company.id, delta);
+    if (!result.success) {
+      Alert.alert(t.company.upgradeFailedTitle, result.errorMessage);
+    }
+  };
+
+  const handlePayrollChange = (delta: number) => {
+    const nextLevel = company.payrollLevel + delta;
+    if (nextLevel < MIN_PAYROLL_LEVEL || nextLevel > MAX_PAYROLL_LEVEL) {
+      return;
+    }
+    const result = setCompanyPayrollLevel(company.id, nextLevel);
+    if (!result.success) {
+      Alert.alert(t.company.upgradeFailedTitle, result.errorMessage);
+    }
+  };
+
+  const nowUnix = Math.floor(Date.now() / 1000);
+  const marginalLabel =
+    company.marginalEmployeeProfitMinor >= 0
+      ? interpolate(t.company.marginalProfit, {
+          amount: formatMoneyCompact(company.marginalEmployeeProfitMinor),
+        })
+      : interpolate(t.company.marginalLoss, {
+          amount: formatMoneyCompact(Math.abs(company.marginalEmployeeProfitMinor)),
+        });
 
   const preferredTrackName = company.preferredTrackName?.toUpperCase() ?? 'GROWTH';
 
@@ -222,6 +264,62 @@ export default function CompanyDetailScreen() {
 
       {upgradeError ? <Text style={styles.warning}>{upgradeError}</Text> : null}
 
+      <SectionHeader title={t.company.employeesTitle} subtitle={t.company.employeesSubtitle} />
+      <Text style={styles.healthMeta}>
+        {interpolate(t.company.employeeLimit, {
+          count: company.employeeCount,
+          max: company.maxEmployees,
+          level: company.level,
+        })}
+      </Text>
+      <View style={styles.employeeRow}>
+        <StatBox label={t.company.employeeCount} value={String(company.employeeCount)} small />
+        <View style={styles.stepper}>
+          <Pressable
+            onPress={() => handleEmployeeDelta(-1)}
+            disabled={company.employeeCount <= 0}
+            style={[styles.stepButton, company.employeeCount <= 0 && styles.stepButtonDisabled]}>
+            <Text style={styles.stepLabel}>−</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handleEmployeeDelta(1)}
+            disabled={company.employeeCount >= company.maxEmployees}
+            style={[
+              styles.stepButton,
+              company.employeeCount >= company.maxEmployees && styles.stepButtonDisabled,
+            ]}>
+            <Text style={styles.stepLabel}>+</Text>
+          </Pressable>
+        </View>
+      </View>
+      <View style={styles.employeeRow}>
+        <StatBox label={t.company.payrollLevel} value={`${company.payrollLevel}/${MAX_PAYROLL_LEVEL}`} small />
+        <View style={styles.stepper}>
+          <Pressable
+            onPress={() => handlePayrollChange(-1)}
+            disabled={company.payrollLevel <= MIN_PAYROLL_LEVEL}
+            style={[styles.stepButton, company.payrollLevel <= MIN_PAYROLL_LEVEL && styles.stepButtonDisabled]}>
+            <Text style={styles.stepLabel}>−</Text>
+          </Pressable>
+          <Pressable
+            onPress={() => handlePayrollChange(1)}
+            disabled={company.payrollLevel >= MAX_PAYROLL_LEVEL}
+            style={[
+              styles.stepButton,
+              company.payrollLevel >= MAX_PAYROLL_LEVEL && styles.stepButtonDisabled,
+            ]}>
+            <Text style={styles.stepLabel}>+</Text>
+          </Pressable>
+        </View>
+      </View>
+      <Text
+        style={[
+          styles.healthMeta,
+          company.marginalEmployeeProfitMinor >= 0 ? styles.positiveMeta : styles.negativeMeta,
+        ]}>
+        {marginalLabel}
+      </Text>
+
       <SectionHeader title={t.company.leadershipTitle} subtitle={t.company.leadershipSubtitle} />
       {executives.length === 0 ? (
         <EmptyState title={t.company.noRolesTitle} message={t.company.noRolesMessage} />
@@ -230,7 +328,13 @@ export default function CompanyDetailScreen() {
           <ExecutiveRoleCard
             key={role.roleId}
             role={role}
-            onHire={!role.hired ? () => hireExecutiveRole(company.id, role.roleId) : undefined}
+            nowUnix={nowUnix}
+            canAfford={playerCashMinor >= role.hireCostMinor}
+            onHire={
+              !role.hired
+                ? () => handleHireExecutive(role.roleId, role.hireCostMinor)
+                : undefined
+            }
           />
         ))
       )}
@@ -297,6 +401,27 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: spacing.sm,
   },
+  employeeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: spacing.md,
+  },
+  stepper: { flexDirection: 'row', gap: spacing.sm },
+  stepButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: `${colors.primary}40`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surface,
+  },
+  stepButtonDisabled: { opacity: 0.4 },
+  stepLabel: { fontFamily: fonts.display, fontSize: fontSizes.lg, color: colors.primary },
+  positiveMeta: { color: colors.success },
+  negativeMeta: { color: colors.danger },
   taskRow: {
     backgroundColor: colors.surface,
     borderWidth: 1,

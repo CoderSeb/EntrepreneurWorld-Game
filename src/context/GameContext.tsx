@@ -23,6 +23,7 @@ import {
 import { refreshEvents } from '@/domain/market/MarketEventService';
 import { simulateOfflineForApp, simulateTick } from '@/domain/economy/EconomySimulator';
 import { accrueLoanInterest, hireExecutiveRole, repayLoan, takeLoan, upgradeAutomation } from '@/domain/companies/ManagementService';
+import { adjustEmployeeCount, setPayrollLevel } from '@/domain/companies/EmployeeService';
 import { processCompanyProgression } from '@/domain/companies/CompanyProgressionService';
 import {
   createHoldingCompany,
@@ -100,6 +101,7 @@ type GameContextValue = {
   ready: boolean;
   config: EconomyConfig;
   backendStatus: BackendStatus;
+  lastSimTickMs: number;
   dashboard: ReturnType<typeof buildDashboardViewModel>;
   market: ReturnType<typeof buildMarketViewModel>;
   companies: ReturnType<typeof buildCompanyUiModels>;
@@ -110,6 +112,8 @@ type GameContextValue = {
   foundSubsidiary: (companyName: string, industryId: string) => OperationResult;
   performCompanyActivity: (companyId: string, activityId: string) => OperationResult;
   hireExecutiveRole: (companyId: string, roleId: string) => OperationResult;
+  adjustCompanyEmployees: (companyId: string, delta: number) => OperationResult;
+  setCompanyPayrollLevel: (companyId: string, payrollLevel: number) => OperationResult;
   getCompanyExecutiveRoles: (companyId: string) => ReturnType<typeof buildCompanyExecutiveRoles>;
   upgradeCompanyTrack: (companyId: string, trackId: string) => OperationResult;
   upgradeCompanyAutomation: (companyId: string) => OperationResult;
@@ -117,6 +121,7 @@ type GameContextValue = {
   repayLoanById: (loanId: string) => OperationResult;
   saveNow: () => Promise<void>;
   syncCloudNow: () => Promise<SyncResult>;
+  reconnectBackend: () => Promise<SyncResult>;
   deleteAccount: () => Promise<SyncResult>;
   getCompanyById: (companyId: string) => ReturnType<typeof buildCompanyUiModels>[number] | null;
   previewRevenueForCompany: (
@@ -157,6 +162,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [tick, setTick] = useState(0);
   const [backendStatus, setBackendStatus] = useState<BackendStatus>(createInitialBackendStatus);
   const [offlineSummary, setOfflineSummary] = useState<OfflineSummary | null>(null);
+  const [lastSimTickMs, setLastSimTickMs] = useState(() => Date.now());
   const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrencyCode>('USD');
   const [locale, setLocaleState] = useState<SupportedLocale>('en');
   const appStateRef = useRef<AppState>(createFreshAppState(nowUnix()));
@@ -240,6 +246,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setDisplayCurrencyState(getDisplayCurrencyFromSettings(state.settings));
     setActiveDisplayCurrency(getDisplayCurrencyFromSettings(state.settings));
     setLocaleState(getLocaleFromSettings(state.settings));
+    setLastSimTickMs(Date.now());
     setReady(true);
     bump();
   }, [bump]);
@@ -275,6 +282,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }
 
       state.lastSeenAtUnix = nowUnix();
+      setLastSimTickMs(Date.now());
       bump();
     }, TICK_SECONDS * 1000);
 
@@ -351,12 +359,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const state = appStateRef.current;
     const now = nowUnix();
     const dashboard = buildDashboardViewModel(state, config);
-    const companies = buildCompanyUiModels(state, config, now);
+    const companies = buildCompanyUiModels(state, config, now, strings);
 
     return {
       ready,
       config,
       backendStatus,
+      lastSimTickMs,
       dashboard,
       market: buildMarketViewModel(state, now),
       companies,
@@ -386,8 +395,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
           return performActivity(state, company, activity, now);
         }),
       hireExecutiveRole: (companyId, roleId) =>
-        mutate(() => hireExecutiveRole(state, config, companyId, roleId, now)),
-      getCompanyExecutiveRoles: (companyId) => buildCompanyExecutiveRoles(state, config, companyId),
+        mutate(() => hireExecutiveRole(state, config, companyId, roleId, nowUnix())),
+      adjustCompanyEmployees: (companyId, delta) =>
+        mutate(() => adjustEmployeeCount(state, companyId, delta, nowUnix())),
+      setCompanyPayrollLevel: (companyId, payrollLevel) =>
+        mutate(() => setPayrollLevel(state, companyId, payrollLevel, nowUnix())),
+      getCompanyExecutiveRoles: (companyId) => buildCompanyExecutiveRoles(state, config, companyId, now),
       upgradeCompanyTrack: (companyId, trackId) =>
         mutate(() => upgradeTrack(state, companyId, trackId, config, now)),
       upgradeCompanyAutomation: (companyId) =>
@@ -429,6 +442,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
 
         return { success: result.success, message: result.message };
+      },
+      reconnectBackend: async () => {
+        const loadResult = await loadGame();
+        const localSave =
+          loadResult.success && loadResult.data.hasLoadedSave ? loadResult.data.saveData : null;
+        const localHasSave = Boolean(loadResult.success && loadResult.data.hasLoadedSave);
+        const reconnectNow = nowUnix();
+        const backend = await runBackendBootstrap(localSave, localHasSave, reconnectNow);
+
+        setConfig(backend.economyConfig);
+        sessionRef.current = backend.session;
+        backendStatusRef.current = backend.status;
+        setBackendStatus(backend.status);
+
+        if (backend.session?.playerId) {
+          state.player.playerId = backend.session.playerId;
+        }
+        applyEntitlementsToAppState(state, backend.entitlements, reconnectNow);
+        bump();
+
+        const message =
+          backend.status.connected
+            ? 'Connected to API'
+            : backend.status.lastError ?? 'API unreachable — start with pwsh ./scripts/run-api-with-postgres.ps1';
+
+        return { success: backend.status.connected, message };
       },
       deleteAccount: async () => {
         const session = sessionRef.current;
@@ -476,7 +515,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       formatMoneyCompact: (minorUnits: number) => formatMoneyCompact(minorUnits, displayCurrency),
       formatMoney: (minorUnits: number) => formatMoney(minorUnits, displayCurrency),
     };
-  }, [tick, ready, config, backendStatus, offlineSummary, mutate, persistGame, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
+  }, [tick, ready, config, backendStatus, lastSimTickMs, offlineSummary, mutate, persistGame, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
 
   useEffect(() => {
     if (ready) {
