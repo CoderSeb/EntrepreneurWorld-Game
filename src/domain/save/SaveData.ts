@@ -1,6 +1,6 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
 
-export const CURRENT_SCHEMA_VERSION = 6;
+export const CURRENT_SCHEMA_VERSION = 7;
 
 export type SaveData = {
   schemaVersion: number;
@@ -146,6 +146,38 @@ export function migrateSavePayload(rawPayload: Record<string, unknown>): Record<
         state.companies = companies;
         migrated.state = state;
         version = 6;
+        break;
+      }
+      case 6: {
+        const state = (migrated.state as Record<string, unknown>) ?? {};
+        const companies = (state.companies as Record<string, unknown>[]) ?? [];
+        const lastSeenRaw = migrated.last_seen_at;
+        let anchorUnix = Math.floor(Date.now() / 1000);
+        if (lastSeenRaw) {
+          const iso = String(lastSeenRaw);
+          anchorUnix = Math.floor(
+            new Date(iso.endsWith('Z') ? iso : `${iso}Z`).getTime() / 1000,
+          );
+        }
+
+        for (const company of companies) {
+          const executiveHires =
+            (company.executive_hires as Record<string, boolean> | undefined) ?? {};
+          const executiveContracts: Record<string, { expires_at_unix: number }> = {};
+          for (const [roleId, hired] of Object.entries(executiveHires)) {
+            if (hired) {
+              executiveContracts[roleId] = { expires_at_unix: anchorUnix + 72 * 3600 };
+            }
+          }
+          company.executive_contracts = executiveContracts;
+          delete company.executive_hires;
+          if (company.payroll_level === undefined) {
+            company.payroll_level = 1;
+          }
+        }
+        state.companies = companies;
+        migrated.state = state;
+        version = 7;
         break;
       }
       default:

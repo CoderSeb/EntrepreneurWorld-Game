@@ -1,5 +1,6 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
 import { CompanyState } from '@/domain/core/CompanyState';
+import { ExecutiveContract } from '@/domain/companies/ExecutiveContracts';
 import { LoanState } from '@/domain/core/LoanState';
 import { PlayerState, createPlayerState } from '@/domain/core/PlayerState';
 import { PurchaseState, createPurchaseState } from '@/domain/core/PurchaseState';
@@ -82,9 +83,10 @@ function companyToDict(company: CompanyState): Record<string, unknown> {
     cash_balance_minor: company.cashBalance.amountMinorUnits,
     reputation: company.reputation,
     automation_level: company.automationLevel,
-    executive_hires: { ...company.executiveHires },
+    executive_contracts: executiveContractsToDict(company.executiveContracts),
     lifetime_profit_minor: company.lifetimeProfitMinor,
     employee_count: company.employeeCount,
+    payroll_level: company.payrollLevel,
     revenue_per_hour_minor: company.revenuePerHour.amountMinorUnits,
     expenses_per_hour_minor: company.expensesPerHour.amountMinorUnits,
     risk_level: company.riskLevel,
@@ -94,13 +96,32 @@ function companyToDict(company: CompanyState): Record<string, unknown> {
   };
 }
 
-function readExecutiveHires(payload: Record<string, unknown>): Record<string, boolean> {
-  const hires = (payload.executive_hires as Record<string, boolean> | undefined) ?? {};
-  const legacyManager = String(payload.manager_id ?? '');
-  if (legacyManager && !hires[legacyManager]) {
-    return { ...hires, [legacyManager]: true };
+function executiveContractsToDict(
+  contracts: Record<string, ExecutiveContract>,
+): Record<string, { expires_at_unix: number }> {
+  const result: Record<string, { expires_at_unix: number }> = {};
+  for (const [roleId, contract] of Object.entries(contracts)) {
+    result[roleId] = { expires_at_unix: contract.expiresAtUnix };
   }
-  return { ...hires };
+  return result;
+}
+
+function readExecutiveContracts(payload: Record<string, unknown>): Record<string, ExecutiveContract> {
+  const raw =
+    (payload.executive_contracts as Record<string, { expires_at_unix?: number }> | undefined) ?? {};
+  const contracts: Record<string, ExecutiveContract> = {};
+  for (const [roleId, entry] of Object.entries(raw)) {
+    contracts[roleId] = { expiresAtUnix: Number(entry.expires_at_unix ?? 0) };
+  }
+
+  const legacyHires = (payload.executive_hires as Record<string, boolean> | undefined) ?? {};
+  for (const [roleId, hired] of Object.entries(legacyHires)) {
+    if (hired && !contracts[roleId]) {
+      contracts[roleId] = { expiresAtUnix: Math.floor(Date.now() / 1000) + 72 * 3600 };
+    }
+  }
+
+  return contracts;
 }
 
 function companyFromDict(payload: Record<string, unknown>): CompanyState {
@@ -113,9 +134,10 @@ function companyFromDict(payload: Record<string, unknown>): CompanyState {
     cashBalance: MoneyValue.fromMinor(Number(payload.cash_balance_minor ?? 0)),
     reputation: Number(payload.reputation ?? 0),
     automationLevel: Number(payload.automation_level ?? 0),
-    executiveHires: readExecutiveHires(payload),
+    executiveContracts: readExecutiveContracts(payload),
     lifetimeProfitMinor: Number(payload.lifetime_profit_minor ?? 0),
     employeeCount: Number(payload.employee_count ?? 0),
+    payrollLevel: Number(payload.payroll_level ?? 1),
     revenuePerHour: MoneyValue.fromMinor(Number(payload.revenue_per_hour_minor ?? 0)),
     expensesPerHour: MoneyValue.fromMinor(Number(payload.expenses_per_hour_minor ?? 0)),
     riskLevel: Number(payload.risk_level ?? 0),

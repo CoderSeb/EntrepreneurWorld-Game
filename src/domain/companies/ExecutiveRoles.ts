@@ -1,5 +1,11 @@
-import { EconomyConfig, ManagerDefinition } from '@/domain/config/EconomyConfig';
+import { EconomyConfig } from '@/domain/config/EconomyConfig';
 import { CompanyState } from '@/domain/core/CompanyState';
+import {
+  EXECUTIVE_CONTRACT_HOURS,
+  getExecutiveHireCostMinor,
+  getExecutiveSalaryMinor,
+  isExecutiveHired,
+} from '@/domain/companies/ExecutiveContracts';
 
 export type ExecutiveRoleUiModel = {
   roleId: string;
@@ -11,35 +17,44 @@ export type ExecutiveRoleUiModel = {
   expenseReductionPercent: number;
   automatesOperations: boolean;
   hired: boolean;
+  expiresAtUnix: number | null;
+  contractHours: number;
 };
 
-export function isExecutiveHired(company: CompanyState, roleId: string): boolean {
-  return Boolean(company.executiveHires[roleId]);
-}
+export { isExecutiveHired, countActiveExecutives } from '@/domain/companies/ExecutiveContracts';
 
-export function getExecutiveRole(config: EconomyConfig, roleId: string): ManagerDefinition | null {
+export function getExecutiveRole(config: EconomyConfig, roleId: string) {
   return config.managers.find((entry) => entry.id === roleId) ?? null;
 }
 
 export function buildExecutiveRoleUiModels(
   company: CompanyState,
   config: EconomyConfig,
+  nowUnix: number,
 ): ExecutiveRoleUiModel[] {
   return config.managers
     .filter((role) => role.appliesTo === company.companyKind)
-    .map((role) => ({
-      roleId: role.id,
-      title: role.displayName,
-      description: role.description,
-      hireCostMinor: role.hireCostMinor,
-      salaryMinor: role.salaryPerHourMinor,
-      revenueBoostPercent: Math.round((role.revenueMultiplier - 1) * 100),
-      expenseReductionPercent: Math.round((1 - role.expenseMultiplier) * 100),
-      automatesOperations: role.automatesTasks,
-      hired: isExecutiveHired(company, role.id),
-    }));
+    .map((role) => {
+      const contract = company.executiveContracts[role.id];
+      const hired = isExecutiveHired(company, role.id, nowUnix);
+      return {
+        roleId: role.id,
+        title: role.displayName,
+        description: role.description,
+        hireCostMinor: getExecutiveHireCostMinor(company, role),
+        salaryMinor: getExecutiveSalaryMinor(company, role),
+        revenueBoostPercent: Math.round((role.revenueMultiplier - 1) * 100),
+        expenseReductionPercent: Math.round((1 - role.expenseMultiplier) * 100),
+        automatesOperations: role.automatesTasks,
+        hired,
+        expiresAtUnix: hired ? contract?.expiresAtUnix ?? null : null,
+        contractHours: EXECUTIVE_CONTRACT_HOURS,
+      };
+    });
 }
 
-export function countHiredExecutives(company: CompanyState): number {
-  return Object.values(company.executiveHires).filter(Boolean).length;
+export function countHiredExecutives(company: CompanyState, config: EconomyConfig, nowUnix: number): number {
+  return config.managers.filter(
+    (role) => role.appliesTo === company.companyKind && isExecutiveHired(company, role.id, nowUnix),
+  ).length;
 }

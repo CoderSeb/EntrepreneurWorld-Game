@@ -3,7 +3,7 @@ import { AppState } from '@/domain/core/AppState';
 import { CompanyState, isHolding } from '@/domain/core/CompanyState';
 import { applyLevelUpgrade } from '@/domain/economy/UpgradeCalculator';
 import { getExpensesPerHour, getRevenuePerHour } from '@/domain/economy/EffectiveEconomyCalculator';
-import { isExecutiveHired } from '@/domain/companies/ExecutiveRoles';
+import { expireExecutiveContracts, isExecutiveHired } from '@/domain/companies/ExecutiveContracts';
 import { applyRankIfImproved } from '@/domain/progression/ProgressionService';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 
@@ -50,13 +50,15 @@ export function processCompanyProgression(
       continue;
     }
 
+    expireExecutiveContracts(company, nowUnix);
+
     const industry = getIndustry(config, company.industryId);
     if (!industry) {
       continue;
     }
 
-    const revenue = getRevenuePerHour(company, config, appState.marketState, subsidiaries);
-    const expenses = getExpensesPerHour(company, config, appState.marketState);
+    const revenue = getRevenuePerHour(company, config, appState.marketState, subsidiaries, nowUnix);
+    const expenses = getExpensesPerHour(company, config, appState.marketState, nowUnix);
     const profitMinor = Math.max(0, revenue.subtract(expenses).amountMinorUnits * hours);
     company.lifetimeProfitMinor += Math.round(profitMinor);
 
@@ -80,7 +82,7 @@ function runAutomatedExecutiveTasks(
   periodEndUnix: number,
 ): void {
   const hasAutomation = config.managers.some((role) => {
-    if (!isExecutiveHired(company, role.id)) {
+    if (!isExecutiveHired(company, role.id, periodEndUnix)) {
       return false;
     }
     return getManager(config, role.id)?.automatesTasks ?? false;

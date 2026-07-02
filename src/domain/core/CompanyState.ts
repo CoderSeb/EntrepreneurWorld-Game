@@ -1,5 +1,6 @@
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { CompanyKind, CompanyKinds } from '@/domain/core/CompanyKinds';
+import { ExecutiveContract } from '@/domain/companies/ExecutiveContracts';
 
 export type CompanyState = {
   id: string;
@@ -10,9 +11,10 @@ export type CompanyState = {
   cashBalance: MoneyValue;
   reputation: number;
   automationLevel: number;
-  executiveHires: Record<string, boolean>;
+  executiveContracts: Record<string, ExecutiveContract>;
   lifetimeProfitMinor: number;
   employeeCount: number;
+  payrollLevel: number;
   revenuePerHour: MoneyValue;
   expensesPerHour: MoneyValue;
   riskLevel: number;
@@ -43,9 +45,10 @@ export function duplicateCompanyState(company: CompanyState): CompanyState {
     cashBalance: MoneyValue.fromMinor(company.cashBalance.amountMinorUnits),
     reputation: company.reputation,
     automationLevel: company.automationLevel,
-    executiveHires: { ...company.executiveHires },
+    executiveContracts: { ...company.executiveContracts },
     lifetimeProfitMinor: company.lifetimeProfitMinor,
     employeeCount: company.employeeCount,
+    payrollLevel: company.payrollLevel,
     revenuePerHour: MoneyValue.fromMinor(company.revenuePerHour.amountMinorUnits),
     expensesPerHour: MoneyValue.fromMinor(company.expensesPerHour.amountMinorUnits),
     riskLevel: company.riskLevel,
