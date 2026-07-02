@@ -43,6 +43,8 @@ export function processCompanyProgression(
   const hours = deltaSeconds / 3600;
   const periodStartUnix = nowUnix - deltaSeconds;
 
+  const subsidiaries = appState.companies.filter((entry) => entry.companyKind === 'subsidiary');
+
   for (const company of appState.companies) {
     if (isHolding(company)) {
       continue;
@@ -53,7 +55,7 @@ export function processCompanyProgression(
       continue;
     }
 
-    const revenue = getRevenuePerHour(company, config, appState.marketState);
+    const revenue = getRevenuePerHour(company, config, appState.marketState, subsidiaries);
     const expenses = getExpensesPerHour(company, config, appState.marketState);
     const profitMinor = Math.max(0, revenue.subtract(expenses).amountMinorUnits * hours);
     company.lifetimeProfitMinor += Math.round(profitMinor);

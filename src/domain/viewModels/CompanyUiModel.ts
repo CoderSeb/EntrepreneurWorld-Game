@@ -2,8 +2,8 @@ import { colors } from '@/theme/tokens';
 import {
   EconomyConfig,
   getActivitiesForKind,
-  getAutomationLevel,
   getIndustry,
+  getUpgradeTrack,
 } from '@/domain/config/EconomyConfig';
 import { resolveIndustryPresentation } from '@/domain/config/IndustryPresentation';
 import { AppState, findCompany } from '@/domain/core/AppState';
@@ -13,8 +13,16 @@ import {
   getExpensesPerHour,
   getRevenuePerHour,
 } from '@/domain/economy/EffectiveEconomyCalculator';
-import { buildExecutiveRoleUiModels, countHiredExecutives } from '@/domain/companies/ExecutiveRoles';
+import {
+  buildExecutiveRoleUiModels,
+  countHiredExecutives,
+} from '@/domain/companies/ExecutiveRoles';
 import { getLevelProgressRatio } from '@/domain/companies/CompanyProgressionService';
+import {
+  getMaxSystemsLevel,
+  getNextSystemsUpgradeCostMinor,
+} from '@/domain/companies/SystemsService';
+import { getTrackLevel, getUpgradeCost } from '@/domain/companies/UpgradeTrackService';
 
 const LEGACY_INDUSTRY_COLORS: Record<string, string> = {
   cafe: colors.warning,
@@ -39,10 +47,17 @@ export type CompanyUiModel = {
   growth: number;
   pendingTasks: number;
   hiredExecutiveCount: number;
+  hasTaskAutomation: boolean;
   levelProgress: number;
   automationLevel: number;
   maxAutomationLevel: number;
   nextAutomationCostMinor: number | null;
+  preferredTrackId: string | null;
+  preferredTrackName: string | null;
+  preferredTrackLevel: number;
+  preferredTrackMaxLevel: number;
+  nextPreferredTrackCostMinor: number | null;
+  preferredTrackRevenueBonusPercent: number;
 };
 
 export function industryColor(industryId: string, config?: EconomyConfig): string {
@@ -55,6 +70,12 @@ export function industryColor(industryId: string, config?: EconomyConfig): strin
   return LEGACY_INDUSTRY_COLORS[industryId] ?? colors.primary;
 }
 
+function companyHasTaskAutomation(company: CompanyState, config: EconomyConfig): boolean {
+  return config.managers.some(
+    (role) => role.automatesTasks && company.executiveHires[role.id] === true,
+  );
+}
+
 export function buildCompanyUiModel(
   company: CompanyState,
   config: EconomyConfig,
@@ -62,7 +83,8 @@ export function buildCompanyUiModel(
   nowUnix: number,
 ): CompanyUiModel {
   const industry = getIndustry(config, company.industryId);
-  const revenue = getRevenuePerHour(company, config, appState.marketState);
+  const subsidiaries = appState.companies.filter((entry) => entry.companyKind === 'subsidiary');
+  const revenue = getRevenuePerHour(company, config, appState.marketState, subsidiaries);
   const expenses = getExpensesPerHour(company, config, appState.marketState);
   const profit = revenue.subtract(expenses);
   const revenueMinor = revenue.amountMinorUnits;
@@ -85,6 +107,15 @@ export function buildCompanyUiModel(
     }
   }
 
+  const preferredTrackId = industry?.preferredTrackId ?? null;
+  const preferredTrack = preferredTrackId ? getUpgradeTrack(config, preferredTrackId) : null;
+  const preferredTrackLevel = preferredTrackId ? getTrackLevel(company, preferredTrackId) : 0;
+  const preferredTrackMaxLevel = preferredTrack?.maxLevel ?? 0;
+  const nextPreferredTrackCostMinor =
+    preferredTrack && preferredTrackLevel < preferredTrack.maxLevel
+      ? getUpgradeCost(company, preferredTrack).amountMinorUnits
+      : null;
+
   return {
     id: company.id,
     name: company.name,
@@ -99,10 +130,20 @@ export function buildCompanyUiModel(
     growth,
     pendingTasks,
     hiredExecutiveCount: countHiredExecutives(company),
+    hasTaskAutomation: companyHasTaskAutomation(company, config),
     levelProgress: getLevelProgressRatio(company, config),
     automationLevel: company.automationLevel,
-    maxAutomationLevel: config.automationLevels.reduce((max, level) => Math.max(max, level.level), 0),
-    nextAutomationCostMinor: getAutomationLevel(config, company.automationLevel + 1)?.upgradeCostMinor ?? null,
+    maxAutomationLevel: industry ? getMaxSystemsLevel(industry, config) : 0,
+    nextAutomationCostMinor:
+      industry ? getNextSystemsUpgradeCostMinor(company, industry, config) : null,
+    preferredTrackId,
+    preferredTrackName: preferredTrack?.displayName ?? null,
+    preferredTrackLevel,
+    preferredTrackMaxLevel,
+    nextPreferredTrackCostMinor,
+    preferredTrackRevenueBonusPercent: preferredTrack
+      ? Math.round(preferredTrack.revenueBonusPerLevel * 100)
+      : 0,
   };
 }
 
@@ -169,4 +210,32 @@ export function buildTaskUiModels(
     }
   }
   return tasks;
+}
+
+export function previewRevenuePerHourMinor(
+  company: CompanyState,
+  config: EconomyConfig,
+  appState: AppState,
+  overrides: {
+    automationLevel?: number;
+    trackLevelDelta?: { trackId: string; delta: number };
+  },
+): number {
+  const draft: CompanyState = {
+    ...company,
+    upgradeTrackLevels: { ...company.upgradeTrackLevels },
+  };
+
+  if (overrides.automationLevel !== undefined) {
+    draft.automationLevel = overrides.automationLevel;
+  }
+
+  if (overrides.trackLevelDelta) {
+    const { trackId, delta } = overrides.trackLevelDelta;
+    const current = draft.upgradeTrackLevels[trackId] ?? 0;
+    draft.upgradeTrackLevels[trackId] = current + delta;
+  }
+
+  const subsidiaries = appState.companies.filter((entry) => entry.companyKind === 'subsidiary');
+  return getRevenuePerHour(draft, config, appState.marketState, subsidiaries).amountMinorUnits;
 }

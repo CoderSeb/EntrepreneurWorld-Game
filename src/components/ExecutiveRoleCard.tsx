@@ -17,7 +17,14 @@ export function ExecutiveRoleCard({ role, onHire }: ExecutiveRoleCardProps) {
   return (
     <View style={[styles.card, role.hired && styles.cardHired]}>
       <View style={styles.header}>
-        <Text style={styles.title}>{role.title}</Text>
+        <View style={styles.titleRow}>
+          <Text style={styles.title}>{role.title}</Text>
+          {role.automatesOperations ? (
+            <View style={styles.badge}>
+              <Text style={styles.badgeLabel}>{t.common.automatesTasksBadge}</Text>
+            </View>
+          ) : null}
+        </View>
         <Text style={styles.status}>{role.hired ? t.common.hired : t.common.open}</Text>
       </View>
       <Text style={styles.description}>{role.description}</Text>
@@ -60,8 +67,19 @@ const styles = StyleSheet.create({
     borderColor: `${colors.success}40`,
     backgroundColor: `${colors.success}08`,
   },
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', gap: spacing.sm },
+  titleRow: { flex: 1, gap: spacing.xs },
   title: { fontFamily: fonts.display, fontSize: fontSizes.lg, color: colors.text, fontWeight: '700' },
+  badge: {
+    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: `${colors.success}50`,
+    backgroundColor: `${colors.success}12`,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+  },
+  badgeLabel: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.success },
   status: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.primary },
   description: { fontFamily: fonts.body, fontSize: fontSizes.sm, color: colors.textSecondary, lineHeight: 18 },
   meta: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted },

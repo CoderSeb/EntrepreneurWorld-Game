@@ -13,8 +13,9 @@ export function calculateHourlyGross(
   marketState: MarketState,
 ): MoneyValue {
   let total = MoneyValue.zero();
+  const subsidiaries = companies.filter((company) => company.companyKind === 'subsidiary');
   for (const company of companies) {
-    total = total.add(getRevenuePerHour(company, config, marketState));
+    total = total.add(getRevenuePerHour(company, config, marketState, subsidiaries));
   }
   return total;
 }

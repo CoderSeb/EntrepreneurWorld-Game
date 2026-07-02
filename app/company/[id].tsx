@@ -1,4 +1,5 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
 import { interpolate, useTranslation } from '@/i18n';
@@ -16,17 +17,18 @@ export default function CompanyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const {
     getCompanyById,
-    config,
-    upgradeCompanyTrack,
-    upgradeCompanyAutomation,
+    previewRevenueForCompany,
     tasks,
     performCompanyActivity,
     hireExecutiveRole,
     getCompanyExecutiveRoles,
+    upgradeCompanyTrack,
+    upgradeCompanyAutomation,
     formatMoneyCompact,
     playerCashMinor,
   } = useGame();
   const { t } = useTranslation();
+  const [upgradeError, setUpgradeError] = useState<string | null>(null);
 
   const company = id ? getCompanyById(id) : null;
   if (!company) {
@@ -40,12 +42,67 @@ export default function CompanyDetailScreen() {
 
   const companyTasks = tasks.filter((task) => task.companyId === company.id);
   const executives = getCompanyExecutiveRoles(company.id);
-  const hasTaskAutomation = executives.some((role) => role.hired && role.automatesOperations);
-  const operationsTrack = config.upgradeTracks.find((track) => track.id === 'operations');
   const levelProgressPercent = Math.round(company.levelProgress * 100);
-  const automationMaxed = company.nextAutomationCostMinor === null;
-  const canAffordAutomation =
+
+  const systemsMaxed = company.nextAutomationCostMinor === null;
+  const canAffordSystems =
     company.nextAutomationCostMinor !== null && playerCashMinor >= company.nextAutomationCostMinor;
+
+  const trackMaxed =
+    company.preferredTrackId !== null &&
+    company.preferredTrackLevel >= company.preferredTrackMaxLevel;
+  const canAffordTrack =
+    company.nextPreferredTrackCostMinor !== null &&
+    playerCashMinor >= company.nextPreferredTrackCostMinor;
+
+  const trackPreviewMinor =
+    company.preferredTrackId && !trackMaxed
+      ? previewRevenueForCompany(company.id, {
+          trackLevelDelta: { trackId: company.preferredTrackId, delta: 1 },
+        })
+      : null;
+
+  const systemsPreviewMinor = !systemsMaxed
+    ? previewRevenueForCompany(company.id, {
+        automationLevel: company.automationLevel + 1,
+      })
+    : null;
+
+  const handleTrackUpgrade = () => {
+    if (!company.preferredTrackId || trackMaxed) {
+      return;
+    }
+    if (!canAffordTrack) {
+      setUpgradeError(t.company.insufficientCash);
+      return;
+    }
+    const result = upgradeCompanyTrack(company.id, company.preferredTrackId);
+    if (!result.success) {
+      setUpgradeError(result.errorMessage);
+      Alert.alert(t.company.upgradeFailedTitle, result.errorMessage);
+      return;
+    }
+    setUpgradeError(null);
+  };
+
+  const handleSystemsUpgrade = () => {
+    if (systemsMaxed) {
+      return;
+    }
+    if (!canAffordSystems) {
+      setUpgradeError(t.company.insufficientCash);
+      return;
+    }
+    const result = upgradeCompanyAutomation(company.id);
+    if (!result.success) {
+      setUpgradeError(result.errorMessage);
+      Alert.alert(t.company.upgradeFailedTitle, result.errorMessage);
+      return;
+    }
+    setUpgradeError(null);
+  };
+
+  const preferredTrackName = company.preferredTrackName?.toUpperCase() ?? 'GROWTH';
 
   return (
     <Screen
@@ -82,22 +139,51 @@ export default function CompanyDetailScreen() {
         })}
       </Text>
 
-      {operationsTrack ? (
+      {company.preferredTrackId && company.preferredTrackName ? (
         <>
-          <SectionHeader title={t.company.operationsTrackTitle} subtitle={t.company.operationsTrackSubtitle} />
-          <PrimaryButton
-            label={interpolate(t.company.trackButton, { name: operationsTrack.displayName.toUpperCase() })}
-            onPress={() => upgradeCompanyTrack(company.id, operationsTrack.id)}
+          <SectionHeader
+            title={interpolate(t.company.growthTrackTitle, { trackName: company.preferredTrackName })}
+            subtitle={interpolate(t.company.growthTrackSubtitle, {
+              bonus: company.preferredTrackRevenueBonusPercent,
+            })}
           />
+          <Text style={styles.healthMeta}>
+            {trackMaxed
+              ? interpolate(t.company.trackMaxed, { max: company.preferredTrackMaxLevel })
+              : interpolate(t.company.growthTrackLevel, {
+                  current: company.preferredTrackLevel,
+                  max: company.preferredTrackMaxLevel,
+                })}
+          </Text>
+          {trackPreviewMinor !== null ? (
+            <Text style={styles.preview}>
+              {interpolate(t.company.upgradePreview, {
+                current: formatMoneyCompact(company.revenueMinor),
+                next: formatMoneyCompact(trackPreviewMinor),
+              })}
+            </Text>
+          ) : null}
+          {!trackMaxed ? (
+            <PrimaryButton
+              label={interpolate(t.company.upgradeGrowthTrack, {
+                trackName: preferredTrackName,
+                from: company.preferredTrackLevel,
+                to: company.preferredTrackLevel + 1,
+                cost: formatMoneyCompact(company.nextPreferredTrackCostMinor ?? 0),
+              })}
+              onPress={handleTrackUpgrade}
+              disabled={!canAffordTrack}
+            />
+          ) : null}
         </>
       ) : null}
 
       <SectionHeader
-        title={t.company.automationTitle}
+        title={t.company.systemsTitle}
         subtitle={
-          automationMaxed
-            ? interpolate(t.company.automationMaxed, { level: company.maxAutomationLevel })
-            : t.company.automationSubtitle
+          systemsMaxed
+            ? interpolate(t.company.systemsMaxed, { level: company.maxAutomationLevel })
+            : t.company.systemsSubtitle
         }
       />
       <View style={styles.automationRow}>
@@ -114,15 +200,27 @@ export default function CompanyDetailScreen() {
           />
         ) : null}
       </View>
-      {!automationMaxed ? (
+      {systemsPreviewMinor !== null ? (
+        <Text style={styles.preview}>
+          {interpolate(t.company.upgradePreview, {
+            current: formatMoneyCompact(company.revenueMinor),
+            next: formatMoneyCompact(systemsPreviewMinor),
+          })}
+        </Text>
+      ) : null}
+      {!systemsMaxed ? (
         <PrimaryButton
-          label={interpolate(t.company.upgradeAutomation, {
+          label={interpolate(t.company.upgradeSystems, {
+            from: company.automationLevel,
+            to: company.automationLevel + 1,
             cost: formatMoneyCompact(company.nextAutomationCostMinor ?? 0),
           })}
-          onPress={() => upgradeCompanyAutomation(company.id)}
-          disabled={!canAffordAutomation}
+          onPress={handleSystemsUpgrade}
+          disabled={!canAffordSystems}
         />
       ) : null}
+
+      {upgradeError ? <Text style={styles.warning}>{upgradeError}</Text> : null}
 
       <SectionHeader title={t.company.leadershipTitle} subtitle={t.company.leadershipSubtitle} />
       {executives.length === 0 ? (
@@ -140,7 +238,7 @@ export default function CompanyDetailScreen() {
       <SectionHeader
         title={t.company.tasksTitle}
         subtitle={
-          hasTaskAutomation
+          company.hasTaskAutomation
             ? t.company.tasksAutomatedSubtitle
             : interpolate(t.company.tasksCountSubtitle, { count: companyTasks.length })
         }
@@ -153,7 +251,7 @@ export default function CompanyDetailScreen() {
             <View style={styles.taskBody}>
               <Text style={styles.taskLabel}>{task.label}</Text>
               <Text style={styles.taskMeta}>
-                {hasTaskAutomation
+                {company.hasTaskAutomation
                   ? t.common.automated
                   : task.ready
                     ? t.common.ready
@@ -161,7 +259,7 @@ export default function CompanyDetailScreen() {
                 {interpolate(t.company.taskReward, { reward: formatMoneyCompact(task.rewardMinor) })}
               </Text>
             </View>
-            {!hasTaskAutomation ? (
+            {!company.hasTaskAutomation ? (
               <PrimaryButton
                 label={t.common.run}
                 onPress={() => performCompanyActivity(task.companyId, task.activityId)}
@@ -186,6 +284,19 @@ const styles = StyleSheet.create({
   stats: { flexDirection: 'row', justifyContent: 'space-between' },
   automationRow: { flexDirection: 'row', gap: spacing.md, marginBottom: spacing.sm },
   healthMeta: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted },
+  preview: {
+    fontFamily: fonts.mono,
+    fontSize: fontSizes.xs,
+    color: colors.primary,
+    marginBottom: spacing.sm,
+  },
+  warning: {
+    fontFamily: fonts.mono,
+    fontSize: fontSizes.xs,
+    color: colors.warning,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
   taskRow: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -199,6 +310,6 @@ const styles = StyleSheet.create({
   },
   taskBody: { flex: 1 },
   taskLabel: { fontFamily: fonts.display, fontSize: fontSizes.md, color: colors.text },
-  taskMeta: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, marginTop: 4 },
-  runButton: { paddingVertical: spacing.sm, paddingHorizontal: spacing.md, minWidth: 72 },
+  taskMeta: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, marginTop: 2 },
+  runButton: { minWidth: 72 },
 });

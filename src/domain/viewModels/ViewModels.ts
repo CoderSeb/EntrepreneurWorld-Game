@@ -28,18 +28,21 @@ export function buildDashboardViewModel(
   config: EconomyConfig,
 ): DashboardViewModel {
   let hourlyNet = MoneyValue.zero();
-  const subsidiaries: CompanyState[] = [];
   let holding: CompanyState | null = null;
+  const subsidiaries: CompanyState[] = [];
 
   for (const company of appState.companies) {
     if (company.companyKind === 'holding') {
       holding = company;
     } else {
       subsidiaries.push(company);
-      const revenue = getRevenuePerHour(company, config, appState.marketState);
-      const expenses = getExpensesPerHour(company, config, appState.marketState);
-      hourlyNet = hourlyNet.add(revenue.subtract(expenses));
     }
+  }
+
+  for (const company of subsidiaries) {
+    const revenue = getRevenuePerHour(company, config, appState.marketState, subsidiaries);
+    const expenses = getExpensesPerHour(company, config, appState.marketState);
+    hourlyNet = hourlyNet.add(revenue.subtract(expenses));
   }
 
   return {

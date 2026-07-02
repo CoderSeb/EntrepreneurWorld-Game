@@ -14,8 +14,8 @@ export function applyLevelUpgrade(
   return {
     ...company,
     level: company.level + 1,
-    revenuePerHour: company.revenuePerHour.multiplyScalar(1.1),
-    expensesPerHour: company.expensesPerHour.multiplyScalar(1.05),
+    revenuePerHour: company.revenuePerHour.multiplyScalar(1.13),
+    expensesPerHour: company.expensesPerHour.multiplyScalar(0.98),
     updatedAtUnix: nowUnix,
     riskLevel: Math.min(1, company.riskLevel + industry.riskProfile * 0.01),
   };

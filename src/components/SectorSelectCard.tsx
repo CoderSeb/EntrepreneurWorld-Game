@@ -1,12 +1,13 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { IndustryDefinition } from '@/domain/config/EconomyConfig';
+import { EconomyConfig, getIndustryFoundingCost, getUpgradeTrack, IndustryDefinition } from '@/domain/config/EconomyConfig';
 import { resolveIndustryPresentation } from '@/domain/config/IndustryPresentation';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
 type SectorSelectCardProps = {
   industry: IndustryDefinition;
+  config: EconomyConfig;
   selected: boolean;
   onPress: () => void;
   formatRevenue: (minorUnits: number) => string;
@@ -14,12 +15,18 @@ type SectorSelectCardProps = {
 
 export function SectorSelectCard({
   industry,
+  config,
   selected,
   onPress,
   formatRevenue,
 }: SectorSelectCardProps) {
   const presentation = resolveIndustryPresentation(industry);
   const iconName = presentation.iconName as keyof typeof Ionicons.glyphMap;
+  const trackName =
+    getUpgradeTrack(config, industry.preferredTrackId ?? '')?.displayName ??
+    industry.preferredTrackId ??
+    '—';
+  const foundingCost = getIndustryFoundingCost(industry, config);
 
   return (
     <Pressable
@@ -35,8 +42,10 @@ export function SectorSelectCard({
       <Text style={styles.title}>{industry.displayName}</Text>
       <Text style={styles.tagline}>{presentation.tagline}</Text>
       <Text style={styles.stats}>
-        {formatRevenue(industry.baseRevenuePerHourMinor)}/hr · {presentation.riskLabel} · {presentation.automationPercent}%
-        auto
+        {formatRevenue(industry.baseRevenuePerHourMinor)}/hr · {presentation.marginPercent}% margin
+      </Text>
+      <Text style={styles.meta}>
+        {trackName} track · {formatRevenue(foundingCost)} to found
       </Text>
     </Pressable>
   );
@@ -49,7 +58,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: spacing.md,
     gap: spacing.xs,
-    minHeight: 120,
+    minHeight: 132,
   },
   title: {
     fontFamily: fonts.display,
@@ -68,6 +77,12 @@ const styles = StyleSheet.create({
     fontFamily: fonts.mono,
     fontSize: fontSizes.micro,
     color: colors.muted,
+    marginTop: spacing.xs,
+  },
+  meta: {
+    fontFamily: fonts.mono,
+    fontSize: fontSizes.micro,
+    color: colors.primary,
     marginTop: 'auto',
   },
 });

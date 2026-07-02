@@ -1,6 +1,7 @@
 import {
   EconomyConfig,
   getIndustry,
+  getIndustryFoundingCost,
   ActivityDefinition,
 } from '@/domain/config/EconomyConfig';
 import { AppState, findCompany } from '@/domain/core/AppState';
@@ -83,7 +84,7 @@ export function createSubsidiaryCompany(
     return fail('invalid_name', 'Company name must not be empty');
   }
 
-  const cost = MoneyValue.fromMinor(config.subsidiaryCompanyCostMinor);
+  const cost = MoneyValue.fromMinor(getIndustryFoundingCost(industry, config));
   if (appState.player.cashBalance.amountMinorUnits < cost.amountMinorUnits) {
     return fail('insufficient_funds', 'Not enough cash to start this subsidiary');
   }

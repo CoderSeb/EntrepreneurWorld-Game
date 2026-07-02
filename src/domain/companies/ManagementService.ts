@@ -1,6 +1,7 @@
 import {
   EconomyConfig,
   getAutomationLevel,
+  getIndustry,
   getLoanProduct,
   getManager,
 } from '@/domain/config/EconomyConfig';
@@ -13,6 +14,10 @@ import { MoneyValue } from '@/domain/money/MoneyValue';
 import { applyRankIfImproved } from '@/domain/progression/ProgressionService';
 import { isExecutiveHired } from '@/domain/companies/ExecutiveRoles';
 import { effectiveLoanTerms } from '@/domain/companies/LoanPricingService';
+import {
+  getMaxSystemsLevel,
+  getNextSystemsUpgradeCostMinor,
+} from '@/domain/companies/SystemsService';
 
 export function hireExecutiveRole(
   appState: AppState,
@@ -63,16 +68,31 @@ export function upgradeAutomation(
     return fail('company_not_found', 'Company not found');
   }
   if (isHolding(company)) {
-    return fail('invalid_company_kind', 'Automation applies to subsidiaries only');
+    return fail('invalid_company_kind', 'Systems upgrades apply to subsidiaries only');
+  }
+
+  const industry = getIndustry(config, company.industryId);
+  if (!industry) {
+    return fail('unknown_industry', 'Industry not found');
+  }
+
+  const maxLevel = getMaxSystemsLevel(industry, config);
+  if (company.automationLevel >= maxLevel) {
+    return fail('automation_maxed', 'Systems are already at max level for this industry');
   }
 
   const nextLevel = company.automationLevel + 1;
   const definition = getAutomationLevel(config, nextLevel);
   if (!definition) {
-    return fail('automation_maxed', 'Automation is already at max level');
+    return fail('automation_maxed', 'Systems are already at max level');
   }
 
-  const cost = MoneyValue.fromMinor(definition.upgradeCostMinor);
+  const costMinor = getNextSystemsUpgradeCostMinor(company, industry, config);
+  if (costMinor === null) {
+    return fail('automation_maxed', 'Systems are already at max level');
+  }
+
+  const cost = MoneyValue.fromMinor(costMinor);
   if (appState.player.cashBalance.amountMinorUnits < cost.amountMinorUnits) {
     return fail('insufficient_funds', 'Not enough cash for automation upgrade');
   }

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
@@ -32,7 +32,9 @@ export default function OnboardingScreen() {
     const result = completeOnboarding(congName.trim(), compName.trim(), industryId);
     if (result.success) {
       router.replace('/(tabs)');
+      return;
     }
+    Alert.alert(t.foundCompany.alertTitle, result.errorMessage);
   };
 
   return (
@@ -103,6 +105,7 @@ export default function OnboardingScreen() {
               <SectorSelectCard
                 key={industry.id}
                 industry={industry}
+                config={config}
                 selected={industryId === industry.id}
                 onPress={() => setIndustryId(industry.id)}
                 formatRevenue={formatMoneyCompact}

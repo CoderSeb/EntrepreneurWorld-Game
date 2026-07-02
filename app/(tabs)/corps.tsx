@@ -40,7 +40,10 @@ export default function CorpsScreen() {
             <View style={styles.header}>
               <View>
                 <Text style={styles.name}>{c.name}</Text>
-                <Text style={styles.sector}>{c.industryLabel}</Text>
+                <Text style={styles.sector}>
+                  {c.industryLabel}
+                  {c.hasTaskAutomation ? ` · ${t.corps.tasksAutomated}` : ''}
+                </Text>
               </View>
               <Text style={[styles.growth, { color: c.growth >= 0 ? colors.success : colors.danger }]}>
                 {c.growth >= 0 ? '+' : ''}

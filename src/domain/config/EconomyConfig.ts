@@ -130,6 +130,10 @@ export function getIndustry(config: EconomyConfig, industryId: string): Industry
   return config.industries[industryId] ?? null;
 }
 
+export function getIndustryFoundingCost(industry: IndustryDefinition, config: EconomyConfig): number {
+  return industry.startCostMinor > 0 ? industry.startCostMinor : config.subsidiaryCompanyCostMinor;
+}
+
 export function getActivity(config: EconomyConfig, activityId: string): ActivityDefinition | null {
   return config.activities.find((a) => a.id === activityId) ?? null;
 }

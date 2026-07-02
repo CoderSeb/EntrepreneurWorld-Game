@@ -17,6 +17,7 @@ export function getRevenuePerHour(
   company: CompanyState,
   config: EconomyConfig,
   marketState: MarketState,
+  subsidiaries: CompanyState[] = [],
 ): MoneyValue {
   if (isHolding(company)) {
     return MoneyValue.zero();
@@ -27,6 +28,7 @@ export function getRevenuePerHour(
   revenue = revenue.multiplyScalar(executiveRevenueMultiplier(company, config));
   revenue = revenue.multiplyScalar(preferredTrackRevenueMultiplier(company, config));
   revenue = revenue.multiplyScalar(getTrackRevenueMultiplier(company, config));
+  revenue = revenue.multiplyScalar(getPortfolioRevenueMultiplier(company, subsidiaries));
   revenue = revenue.multiplyScalar(getRevenueMultiplier(marketState, company.industryId));
   return revenue;
 }
@@ -95,7 +97,30 @@ function executiveSalaries(company: CompanyState, config: EconomyConfig): MoneyV
   return MoneyValue.fromMinor(total);
 }
 
-const PREFERRED_TRACK_REVENUE_BONUS = 1.03;
+const PREFERRED_TRACK_REVENUE_BONUS = 1.08;
+
+export function getPortfolioRevenueMultiplier(
+  company: CompanyState,
+  subsidiaries: CompanyState[],
+): number {
+  if (subsidiaries.length === 0) {
+    return 1;
+  }
+
+  let multiplier = 1;
+  const uniqueIndustries = new Set(subsidiaries.map((entry) => entry.industryId));
+  if (uniqueIndustries.size >= 2) {
+    multiplier *= 1.02;
+  }
+
+  const sameIndustry = subsidiaries.filter((entry) => entry.industryId === company.industryId);
+  const duplicateIndex = sameIndustry.findIndex((entry) => entry.id === company.id);
+  if (duplicateIndex > 0) {
+    multiplier *= 0.95;
+  }
+
+  return multiplier;
+}
 
 function preferredTrackRevenueMultiplier(company: CompanyState, config: EconomyConfig): number {
   const industry = getIndustry(config, company.industryId);

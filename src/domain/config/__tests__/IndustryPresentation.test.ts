@@ -10,7 +10,7 @@ describe('IndustryPresentation', () => {
     const cafe = config.industries.cafe;
     expect(cafe.iconName).toBe('cafe');
     expect(cafe.tagline).toBe('Steady foot traffic');
-    expect(cafe.focusHint).toContain('COO');
+    expect(cafe.focusHint).toContain('Operations');
     expect(cafe.accentColor).toBe('#f5a623');
     expect(cafe.preferredTrackId).toBe('operations');
   });

@@ -30,7 +30,7 @@ function makeSubsidiary(industryId: string, revenueMinor: number, expensesMinor:
 }
 
 describe('EffectiveEconomyCalculator preferred track bonus', () => {
-  it('applies +3% revenue when preferred track has at least one level', () => {
+  it('applies +8% revenue when preferred track has at least one level', () => {
     const company = makeSubsidiary('cafe', 120_000, 70_000);
     const opsBonus = config.upgradeTracks.find((track) => track.id === 'operations')!.revenueBonusPerLevel;
 
@@ -38,7 +38,7 @@ describe('EffectiveEconomyCalculator preferred track bonus', () => {
     const boosted = getRevenuePerHour(company, config, {}).amountMinorUnits;
     const trackOnly = Math.round(120_000 * (1 + opsBonus));
 
-    expect(boosted).toBe(Math.round(trackOnly * 1.03));
+    expect(boosted).toBe(Math.round(trackOnly * 1.08));
   });
 
   it('does not apply preferred bonus on non-preferred tracks', () => {
@@ -50,6 +50,6 @@ describe('EffectiveEconomyCalculator preferred track bonus', () => {
     const trackOnly = Math.round(140_000 * (1 + opsBonus));
 
     expect(withOps).toBe(trackOnly);
-    expect(withOps).toBeLessThan(Math.round(trackOnly * 1.03));
+    expect(withOps).toBeLessThan(Math.round(trackOnly * 1.08));
   });
 });

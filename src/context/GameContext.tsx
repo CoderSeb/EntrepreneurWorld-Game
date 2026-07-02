@@ -37,6 +37,7 @@ import {
   buildCompanyExecutiveRoles,
   buildCompanyUiModels,
   buildTaskUiModels,
+  previewRevenuePerHourMinor,
 } from '@/domain/viewModels/CompanyUiModel';
 import { findCompany } from '@/domain/core/AppState';
 import { OperationResult } from '@/domain/core/OperationResult';
@@ -118,6 +119,13 @@ type GameContextValue = {
   syncCloudNow: () => Promise<SyncResult>;
   deleteAccount: () => Promise<SyncResult>;
   getCompanyById: (companyId: string) => ReturnType<typeof buildCompanyUiModels>[number] | null;
+  previewRevenueForCompany: (
+    companyId: string,
+    overrides: {
+      automationLevel?: number;
+      trackLevelDelta?: { trackId: string; delta: number };
+    },
+  ) => number | null;
   activeLoans: AppState['player']['activeLoans'];
   playerCashMinor: number;
   displayCurrency: DisplayCurrencyCode;
@@ -451,6 +459,13 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return { success: true, message: result.message };
       },
       getCompanyById: (companyId) => companies.find((c) => c.id === companyId) ?? null,
+      previewRevenueForCompany: (companyId, overrides) => {
+        const company = findCompany(state, companyId);
+        if (!company) {
+          return null;
+        }
+        return previewRevenuePerHourMinor(company, config, state, overrides);
+      },
       activeLoans: [...state.player.activeLoans],
       playerCashMinor: state.player.cashBalance.amountMinorUnits,
       displayCurrency,
