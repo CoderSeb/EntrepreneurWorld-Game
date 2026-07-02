@@ -15,6 +15,7 @@ import { EconomyConfig } from '@/domain/config/EconomyConfig';
 import {
   applyNewGameDefaults,
   applySaveToAppState,
+  clearLocalSave,
   createFreshAppState,
   loadGame,
   saveGame,
@@ -44,16 +45,18 @@ import * as SplashScreen from 'expo-splash-screen';
 import { colors } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { guardOfflineDuration } from '@/domain/security/TimeManipulationGuard';
-import { t } from '@/i18n';
+import { getLocaleFromSettings, LOCALE_SETTING_KEY } from '@/i18n/LocaleService';
+import { getTranslations, SupportedLocale } from '@/i18n/locales';
+import type { TranslationDictionary } from '@/i18n/types';
 import { isBackendEnabled } from '@/config/backendConfig';
 import {
   BackendStatus,
-  requestAccountDeletion as submitAccountDeletionRequest,
+  deletePlayerAccount,
   runBackendBootstrap,
   syncCloudSaveNow,
   uploadCloudSaveIfNeeded,
 } from '@/services/backend/BackendBootstrapService';
-import { AuthSession } from '@/services/auth/authSessionStore';
+import { AuthSession, clearAuthSession } from '@/services/auth/authSessionStore';
 import {
   DISPLAY_CURRENCY_SETTING_KEY,
   DisplayCurrencyCode,
@@ -113,12 +116,15 @@ type GameContextValue = {
   repayLoanById: (loanId: string) => OperationResult;
   saveNow: () => Promise<void>;
   syncCloudNow: () => Promise<SyncResult>;
-  requestAccountDeletion: () => Promise<SyncResult>;
+  deleteAccount: () => Promise<SyncResult>;
   getCompanyById: (companyId: string) => ReturnType<typeof buildCompanyUiModels>[number] | null;
   activeLoans: AppState['player']['activeLoans'];
   playerCashMinor: number;
   displayCurrency: DisplayCurrencyCode;
   setDisplayCurrency: (currency: DisplayCurrencyCode) => void;
+  locale: SupportedLocale;
+  setLocale: (locale: SupportedLocale) => void;
+  strings: TranslationDictionary;
   formatMoneyCompact: (minorUnits: number) => string;
   formatMoney: (minorUnits: number) => string;
 };
@@ -144,6 +150,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>(createInitialBackendStatus);
   const [offlineSummary, setOfflineSummary] = useState<OfflineSummary | null>(null);
   const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrencyCode>('USD');
+  const [locale, setLocaleState] = useState<SupportedLocale>('en');
   const appStateRef = useRef<AppState>(createFreshAppState(nowUnix()));
   const sessionRef = useRef<AuthSession | null>(null);
   const backendStatusRef = useRef<BackendStatus>(createInitialBackendStatus());
@@ -224,6 +231,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     refreshEvents(state, activeConfig, now);
     setDisplayCurrencyState(getDisplayCurrencyFromSettings(state.settings));
     setActiveDisplayCurrency(getDisplayCurrencyFromSettings(state.settings));
+    setLocaleState(getLocaleFromSettings(state.settings));
     setReady(true);
     bump();
   }, [bump]);
@@ -314,6 +322,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [bump, persistGame],
   );
 
+  const setLocale = useCallback(
+    (nextLocale: SupportedLocale) => {
+      appStateRef.current.settings[LOCALE_SETTING_KEY] = nextLocale;
+      setLocaleState(nextLocale);
+      bump();
+      persistGame().catch(() => undefined);
+    },
+    [bump, persistGame],
+  );
+
+  const strings = useMemo(() => getTranslations(locale), [locale]);
+
   useEffect(() => {
     setActiveDisplayCurrency(displayCurrency);
   }, [displayCurrency]);
@@ -402,23 +422,46 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
         return { success: result.success, message: result.message };
       },
-      requestAccountDeletion: async () => {
+      deleteAccount: async () => {
         const session = sessionRef.current;
         if (!session) {
           return { success: false, message: 'Not signed in to backend' };
         }
-        const result = await submitAccountDeletionRequest(session);
-        return { success: result.success, message: result.message };
+
+        const result = await deletePlayerAccount(session);
+        if (!result.success) {
+          return { success: false, message: result.message };
+        }
+
+        await clearAuthSession();
+        await clearLocalSave();
+        sessionRef.current = null;
+
+        const now = nowUnix();
+        const freshState = createFreshAppState(now);
+        applyNewGameDefaults(freshState, config, now);
+        appStateRef.current = freshState;
+
+        const resetStatus = createInitialBackendStatus();
+        backendStatusRef.current = resetStatus;
+        setBackendStatus(resetStatus);
+        setOfflineSummary(null);
+        bump();
+
+        return { success: true, message: result.message };
       },
       getCompanyById: (companyId) => companies.find((c) => c.id === companyId) ?? null,
       activeLoans: [...state.player.activeLoans],
       playerCashMinor: state.player.cashBalance.amountMinorUnits,
       displayCurrency,
       setDisplayCurrency,
+      locale,
+      setLocale,
+      strings,
       formatMoneyCompact: (minorUnits: number) => formatMoneyCompact(minorUnits, displayCurrency),
       formatMoney: (minorUnits: number) => formatMoney(minorUnits, displayCurrency),
     };
-  }, [tick, ready, config, backendStatus, offlineSummary, mutate, persistGame, displayCurrency, setDisplayCurrency]);
+  }, [tick, ready, config, backendStatus, offlineSummary, mutate, persistGame, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
 
   useEffect(() => {
     if (ready) {
@@ -430,7 +473,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     return (
       <View style={styles.bootScreen}>
         <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.bootText}>{t().common.loading}</Text>
+        <Text style={styles.bootText}>{strings.common.loading}</Text>
       </View>
     );
   }

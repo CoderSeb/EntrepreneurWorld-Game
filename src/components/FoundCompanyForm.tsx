@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { Card } from '@/components/Card';
 import { SectorSelectCard } from '@/components/SectorSelectCard';
@@ -12,6 +13,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 
 export function FoundCompanyForm() {
   const { config, dashboard, playerCashMinor, foundSubsidiary, formatMoneyCompact } = useGame();
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(false);
   const [companyName, setCompanyName] = useState('');
   const [industryId, setIndustryId] = useState<string | null>(null);
@@ -28,6 +30,7 @@ export function FoundCompanyForm() {
   const canSubmit = Boolean(industryId) && trimmedName.length >= 2 && canAfford;
   const selectedIndustry = industryId ? getIndustry(config, industryId) : null;
   const selectedPresentation = selectedIndustry ? resolveIndustryPresentation(selectedIndustry) : null;
+  const foundName = trimmedName ? trimmedName.toUpperCase() : t.foundCompany.foundFallback;
 
   const handleFound = () => {
     if (!industryId) {
@@ -40,44 +43,50 @@ export function FoundCompanyForm() {
       setExpanded(false);
       return;
     }
-    Alert.alert('Could not found company', result.errorMessage);
+    Alert.alert(t.foundCompany.alertTitle, result.errorMessage);
   };
 
   return (
     <View style={styles.container}>
       {!expanded ? (
         <Pressable onPress={() => setExpanded(true)} style={styles.slotPrompt}>
-          <Text style={styles.slotTitle}>Empty subsidiary slot</Text>
+          <Text style={styles.slotTitle}>{t.foundCompany.emptySlotTitle}</Text>
           <Text style={styles.slotMeta}>
-            Rank {dashboard.businessRank} · {dashboard.subsidiaryCount}/{dashboard.maxSubsidiaries} used ·{' '}
-            {formatMoneyCompact(foundingCost)} to found
+            {interpolate(t.foundCompany.emptySlotMeta, {
+              rank: dashboard.businessRank,
+              used: dashboard.subsidiaryCount,
+              max: dashboard.maxSubsidiaries,
+              cost: formatMoneyCompact(foundingCost),
+            })}
           </Text>
-          <Text style={styles.slotAction}>TAP TO FOUND COMPANY →</Text>
+          <Text style={styles.slotAction}>{t.foundCompany.emptySlotAction}</Text>
         </Pressable>
       ) : (
         <View style={styles.form}>
           <View style={styles.formHeader}>
-            <Text style={styles.formTitle}>Found subsidiary</Text>
+            <Text style={styles.formTitle}>{t.foundCompany.formTitle}</Text>
             <Pressable onPress={() => setExpanded(false)} hitSlop={12}>
-              <Text style={styles.cancel}>Cancel</Text>
+              <Text style={styles.cancel}>{t.common.cancel}</Text>
             </Pressable>
           </View>
           <Text style={styles.hint}>
-            Available from rank 1. You need {formatMoneyCompact(foundingCost)} cash (you have{' '}
-            {formatMoneyCompact(playerCashMinor)}).
+            {interpolate(t.foundCompany.hint, {
+              cost: formatMoneyCompact(foundingCost),
+              cash: formatMoneyCompact(playerCashMinor),
+            })}
           </Text>
 
-          <Text style={styles.fieldLabel}>COMPANY NAME</Text>
+          <Text style={styles.fieldLabel}>{t.common.companyName}</Text>
           <TextInput
             value={companyName}
             onChangeText={setCompanyName}
-            placeholder="e.g. Apex Dynamics"
+            placeholder={t.onboarding.companyPlaceholder}
             placeholderTextColor={colors.muted}
             style={[styles.input, trimmedName.length >= 2 && styles.inputValid]}
             maxLength={28}
           />
 
-          <Text style={styles.fieldLabel}>INDUSTRY</Text>
+          <Text style={styles.fieldLabel}>{t.common.industry}</Text>
           <View style={styles.sectorGrid}>
             {unlockedIndustries.map((industry) => (
               <SectorSelectCard
@@ -92,19 +101,24 @@ export function FoundCompanyForm() {
 
           {selectedPresentation ? (
             <Card accentColor={selectedPresentation.accentColor} style={styles.focusCard}>
-              <Text style={styles.focusKicker}>BEST FOCUS</Text>
+              <Text style={styles.focusKicker}>{t.common.bestFocus}</Text>
               <Text style={styles.focusHint}>{selectedPresentation.focusHint}</Text>
             </Card>
           ) : null}
 
           <PrimaryButton
-            label={`FOUND ${trimmedName ? trimmedName.toUpperCase() : 'COMPANY'} · ${formatMoneyCompact(foundingCost)}`}
+            label={interpolate(t.foundCompany.foundButton, {
+              name: foundName,
+              cost: formatMoneyCompact(foundingCost),
+            })}
             onPress={handleFound}
             disabled={!canSubmit}
           />
           {!canAfford ? (
             <Text style={styles.warning}>
-              Need {formatMoneyCompact(foundingCost - playerCashMinor)} more cash to found this company.
+              {interpolate(t.foundCompany.needMoreCash, {
+                amount: formatMoneyCompact(foundingCost - playerCashMinor),
+              })}
             </Text>
           ) : null}
         </View>

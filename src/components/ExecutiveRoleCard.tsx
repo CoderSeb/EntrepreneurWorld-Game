@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { ExecutiveRoleUiModel } from '@/domain/companies/ExecutiveRoles';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
@@ -11,24 +12,35 @@ type ExecutiveRoleCardProps = {
 
 export function ExecutiveRoleCard({ role, onHire }: ExecutiveRoleCardProps) {
   const { formatMoneyCompact } = useGame();
+  const { t } = useTranslation();
+
   return (
     <View style={[styles.card, role.hired && styles.cardHired]}>
       <View style={styles.header}>
         <Text style={styles.title}>{role.title}</Text>
-        <Text style={styles.status}>{role.hired ? 'HIRED' : 'OPEN'}</Text>
+        <Text style={styles.status}>{role.hired ? t.common.hired : t.common.open}</Text>
       </View>
       <Text style={styles.description}>{role.description}</Text>
       <Text style={styles.meta}>
-        {role.revenueBoostPercent > 0 ? `+${role.revenueBoostPercent}% revenue · ` : ''}
-        {role.expenseReductionPercent > 0 ? `-${role.expenseReductionPercent}% costs · ` : ''}
-        {role.automatesOperations ? 'Automates tasks' : 'Manual ops'}
+        {role.revenueBoostPercent > 0
+          ? interpolate(t.executive.revenueBoost, { percent: role.revenueBoostPercent })
+          : ''}
+        {role.expenseReductionPercent > 0
+          ? interpolate(t.executive.expenseReduction, { percent: role.expenseReductionPercent })
+          : ''}
+        {role.automatesOperations ? t.common.automatesTasks : t.common.manualOps}
       </Text>
       <Text style={styles.salary}>
-        Hire {formatMoneyCompact(role.hireCostMinor)} · {formatMoneyCompact(role.salaryMinor)}/hr
+        {interpolate(t.executive.salaryLine, {
+          hireCost: formatMoneyCompact(role.hireCostMinor),
+          salary: formatMoneyCompact(role.salaryMinor),
+        })}
       </Text>
       {!role.hired && onHire ? (
         <Pressable onPress={onHire} style={styles.hireButton}>
-          <Text style={styles.hireLabel}>HIRE {role.title.toUpperCase()}</Text>
+          <Text style={styles.hireLabel}>
+            {interpolate(t.executive.hireRole, { role: role.title.toUpperCase() })}
+          </Text>
         </Pressable>
       ) : null}
     </View>

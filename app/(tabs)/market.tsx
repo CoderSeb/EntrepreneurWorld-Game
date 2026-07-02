@@ -1,29 +1,39 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { Screen } from '@/components/Screen';
 import { GlowBadge } from '@/components/GlowBadge';
 import { SectionHeader } from '@/components/SectionHeader';
 import { EmptyState } from '@/components/EmptyState';
+import { LeaderboardSection } from '@/components/LeaderboardSection';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
 export default function MarketScreen() {
   const { companies, market, dashboard, formatMoneyCompact } = useGame();
+  const { t } = useTranslation();
   const conglomerateLabel = dashboard.conglomerateName.trim();
 
   return (
     <Screen
       header={
         <View>
-          <Text style={styles.headerTitle}>Market intelligence</Text>
+          <Text style={styles.headerTitle}>{t.market.title}</Text>
           <Text style={styles.headerMeta}>
-            {conglomerateLabel ? `${conglomerateLabel} · ` : ''}Live sector performance and global events
+            {conglomerateLabel
+              ? interpolate(t.market.headerMetaWithConglomerate, { name: conglomerateLabel })
+              : t.market.headerMetaDefault}
           </Text>
         </View>
       }>
-      <SectionHeader title="Your companies" subtitle={`${companies.length} portfolio companies`} />
+      <LeaderboardSection />
+
+      <SectionHeader
+        title={t.market.yourCompanies}
+        subtitle={interpolate(t.market.yourCompaniesSubtitle, { count: companies.length })}
+      />
       {companies.length === 0 ? (
-        <EmptyState title="No listings" message="Found a company in CORPS to appear here." />
+        <EmptyState title={t.market.noListingsTitle} message={t.market.noListingsMessage} />
       ) : (
         companies.map((c) => (
           <View key={c.id} style={[styles.row, { borderColor: `${c.sectorColor}18` }]}>
@@ -32,7 +42,10 @@ export default function MarketScreen() {
                 {c.name}
               </Text>
               <Text style={styles.industry}>{c.industryLabel}</Text>
-              <Text style={styles.revenue}>{formatMoneyCompact(c.revenueMinor)}/hr</Text>
+              <Text style={styles.revenue}>
+                {formatMoneyCompact(c.revenueMinor)}
+                {t.common.perHour}
+              </Text>
             </View>
             <Text style={[styles.delta, { color: c.growth >= 0 ? colors.success : colors.danger }]}>
               {c.growth >= 0 ? '+' : ''}
@@ -42,21 +55,29 @@ export default function MarketScreen() {
         ))
       )}
 
-      <SectionHeader title="Active events" subtitle={`${market.events.length} modifiers running`} />
+      <SectionHeader
+        title={t.market.activeEvents}
+        subtitle={interpolate(t.market.activeEventsSubtitle, { count: market.events.length })}
+      />
       {market.events.length === 0 ? (
-        <EmptyState title="Calm markets" message="No active events — check back after your next session." />
+        <EmptyState title={t.market.calmMarketsTitle} message={t.market.calmMarketsMessage} />
       ) : (
         market.events.map((event) => {
           const bullish = event.revenueMultiplier >= 1;
-          const tag = event.global ? 'GLOBAL' : 'SECTOR';
+          const tag = event.global ? t.common.global : t.common.sector;
           const color = bullish ? colors.primary : colors.danger;
           return (
             <View key={event.id} style={styles.eventRow}>
-              <Text style={styles.time}>{event.remainingHours.toFixed(0)}h</Text>
+              <Text style={styles.time}>
+                {interpolate(t.market.hoursShort, { hours: event.remainingHours.toFixed(0) })}
+              </Text>
               <View style={styles.eventBody}>
                 <Text style={styles.headline}>{event.displayName}</Text>
                 <Text style={styles.eventMeta}>
-                  Rev ×{event.revenueMultiplier.toFixed(2)} · Exp ×{event.expenseMultiplier.toFixed(2)}
+                  {interpolate(t.market.eventMeta, {
+                    revenue: event.revenueMultiplier.toFixed(2),
+                    expense: event.expenseMultiplier.toFixed(2),
+                  })}
                 </Text>
               </View>
               <GlowBadge label={tag} color={color} />

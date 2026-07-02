@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { Screen } from '@/components/Screen';
 import { Card } from '@/components/Card';
 import { StatBox } from '@/components/StatBox';
@@ -13,6 +14,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 
 export default function HqScreen() {
   const { dashboard, companies, offlineSummary, dismissOfflineSummary, formatMoneyCompact } = useGame();
+  const { t } = useTranslation();
   const totalRev = companies.reduce((s, c) => s + c.revenueMinor, 0);
   const totalProfit = companies.reduce((s, c) => s + c.profitMinor, 0);
 
@@ -22,9 +24,11 @@ export default function HqScreen() {
         <View style={styles.header}>
           <View style={styles.headerTitleBlock}>
             <Text style={styles.congName} numberOfLines={2}>
-              {dashboard.conglomerateName.toUpperCase() || 'YOUR EMPIRE'}
+              {dashboard.conglomerateName.toUpperCase() || t.common.yourEmpire.toUpperCase()}
             </Text>
-            <Text style={styles.subtitle}>ENTREPRENEUR WORLD · RANK {dashboard.businessRank}</Text>
+            <Text style={styles.subtitle}>
+              {interpolate(t.hq.subtitle, { rank: dashboard.businessRank })}
+            </Text>
           </View>
           <View style={styles.credits}>
             <Text style={styles.creditsText}>{formatMoneyCompact(dashboard.playerCash.amountMinorUnits)}</Text>
@@ -33,33 +37,35 @@ export default function HqScreen() {
       }>
       {offlineSummary ? (
         <Card accentColor={colors.success} glow>
-          <Text style={styles.cardLabel}>OFFLINE PROGRESS</Text>
+          <Text style={styles.cardLabel}>{t.hq.offlineProgress}</Text>
           <Text style={styles.offlineValue}>
             +{formatMoneyCompact(offlineSummary.result.netIncome.amountMinorUnits)}
           </Text>
           <Text style={styles.offlineMeta}>
-            {Math.round(offlineSummary.offlineSeconds / 3600)}h away · effective{' '}
-            {offlineSummary.result.effectiveHours.toFixed(1)}h simulated
+            {interpolate(t.hq.offlineMeta, {
+              hours: Math.round(offlineSummary.offlineSeconds / 3600),
+              effective: offlineSummary.result.effectiveHours.toFixed(1),
+            })}
           </Text>
-          <PrimaryButton label="DISMISS" onPress={dismissOfflineSummary} />
+          <PrimaryButton label={t.common.dismiss} onPress={dismissOfflineSummary} />
         </Card>
       ) : null}
 
       <Card accentColor={colors.primary} glow>
-        <Text style={styles.cardLabel}>NET WORTH</Text>
+        <Text style={styles.cardLabel}>{t.hq.netWorth}</Text>
         <Text style={styles.heroValue}>{formatMoneyCompact(dashboard.netWorth.amountMinorUnits)}</Text>
       </Card>
 
       <View style={styles.kpiRow}>
         <Card accentColor={colors.warning} style={styles.kpiCard}>
-          <StatBox label="TOTAL REV/HR" value={formatMoneyCompact(totalRev)} valueColor={colors.warning} small />
+          <StatBox label={t.hq.totalRevPerHr} value={formatMoneyCompact(totalRev)} valueColor={colors.warning} small />
         </Card>
         <Card accentColor={colors.success} style={styles.kpiCard}>
-          <StatBox label="NET PROFIT/HR" value={formatMoneyCompact(totalProfit)} valueColor={colors.success} small />
+          <StatBox label={t.hq.netProfitPerHr} value={formatMoneyCompact(totalProfit)} valueColor={colors.success} small />
         </Card>
         <Card accentColor={colors.accentPurple} style={styles.kpiCard}>
           <StatBox
-            label="COMPANIES"
+            label={t.common.companies}
             value={`${dashboard.subsidiaryCount}/${dashboard.maxSubsidiaries}`}
             valueColor={colors.accentPurple}
             small
@@ -67,9 +73,12 @@ export default function HqScreen() {
         </Card>
       </View>
 
-      <SectionHeader title="Portfolio health" subtitle={`${companies.length} active subsidiaries`} />
+      <SectionHeader
+        title={t.hq.portfolioHealth}
+        subtitle={interpolate(t.hq.portfolioSubtitle, { count: companies.length })}
+      />
       {companies.length === 0 ? (
-        <EmptyState title="No companies yet" message="Open CORPS to found your first subsidiary." />
+        <EmptyState title={t.hq.noCompaniesTitle} message={t.hq.noCompaniesMessage} />
       ) : (
         companies.map((c) => (
           <Pressable
@@ -89,8 +98,15 @@ export default function HqScreen() {
             </View>
             <HealthBar value={c.health} />
             <Text style={styles.healthMeta}>
-              HEALTH {c.health}% · {c.pendingTasks} READY TASKS · LVL {c.level}
-              {c.hiredExecutiveCount > 0 ? ` · ${c.hiredExecutiveCount} EXEC` : ''}
+              {interpolate(t.hq.healthMeta, {
+                health: c.health,
+                tasks: c.pendingTasks,
+                level: c.level,
+                executives:
+                  c.hiredExecutiveCount > 0
+                    ? interpolate(t.hq.executivesSuffix, { count: c.hiredExecutiveCount })
+                    : '',
+              })}
             </Text>
           </Pressable>
         ))

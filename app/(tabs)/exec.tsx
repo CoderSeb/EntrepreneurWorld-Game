@@ -1,5 +1,8 @@
-import { StyleSheet, Text, View, Pressable } from 'react-native';
+import { useState } from 'react';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
+import { router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
+import { interpolate, LOCALE_CATALOG, useTranslation } from '@/i18n';
 import { Screen } from '@/components/Screen';
 import { Card } from '@/components/Card';
 import { StatBox } from '@/components/StatBox';
@@ -13,13 +16,14 @@ import {
   formatAnnualRatePercent,
 } from '@/domain/companies/LoanPricingService';
 import { DisplayCurrencyCode } from '@/domain/money/MoneyFormatter';
+import { SupportedLocale } from '@/i18n/locales';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { getApiBaseUrl } from '@/config/backendConfig';
 
-function formatSyncTime(unix: number | null): string {
+function formatSyncTime(unix: number | null, neverLabel: string): string {
   if (!unix) {
-    return 'Never';
+    return neverLabel;
   }
   return new Date(unix * 1000).toLocaleString();
 }
@@ -27,7 +31,6 @@ function formatSyncTime(unix: number | null): string {
 export default function ExecScreen() {
   const {
     dashboard,
-    companies,
     config,
     backendStatus,
     activeLoans,
@@ -35,17 +38,53 @@ export default function ExecScreen() {
     repayLoanById,
     saveNow,
     syncCloudNow,
-    requestAccountDeletion,
+    deleteAccount,
     displayCurrency,
     setDisplayCurrency,
+    locale,
+    setLocale,
     formatMoneyCompact,
   } = useGame();
+  const { t } = useTranslation();
   const { busy, run } = useActionFeedback();
+  const [deletingAccount, setDeletingAccount] = useState(false);
 
   const apiBaseUrl = getApiBaseUrl();
   const rank = dashboard.businessRank;
   const annualRate = effectiveAnnualInterestRate(rank);
   const currencyOptions: DisplayCurrencyCode[] = ['USD', 'EUR', 'SEK'];
+
+  const backendStatusLabel = backendStatus.enabled
+    ? backendStatus.connected
+      ? t.exec.connected
+      : t.exec.offline
+    : t.exec.localOnly;
+
+  const confirmDeleteAccount = () => {
+    if (!backendStatus.connected || deletingAccount) {
+      return;
+    }
+
+    Alert.alert(t.exec.deleteAccountConfirmTitle, t.exec.deleteAccountConfirmMessage, [
+      { text: t.common.cancel, style: 'cancel' },
+      {
+        text: t.exec.deleteAccountConfirmAction,
+        style: 'destructive',
+        onPress: () => {
+          setDeletingAccount(true);
+          deleteAccount()
+            .then((result) => {
+              if (result.success) {
+                router.replace('/onboarding');
+                return;
+              }
+              Alert.alert(t.exec.deleteAccountFailedTitle, result.message);
+            })
+            .finally(() => setDeletingAccount(false));
+        },
+      },
+    ]);
+  };
 
   return (
     <Screen>
@@ -56,82 +95,77 @@ export default function ExecScreen() {
           </Text>
         </View>
         <Text style={styles.name} numberOfLines={2}>
-          {dashboard.conglomerateName || 'Your Empire'}
+          {dashboard.conglomerateName || t.common.yourEmpire}
         </Text>
-        <Text style={styles.sub}>CONGLOMERATE · RANK {rank}</Text>
+        <Text style={styles.sub}>{interpolate(t.exec.conglomerateRank, { rank })}</Text>
         <View style={styles.stats}>
           <StatBox
-            label="CASH"
+            label={t.common.cash}
             value={formatMoneyCompact(dashboard.playerCash.amountMinorUnits)}
             valueColor={colors.warning}
             small
           />
-          <StatBox label="COMPANIES" value={String(dashboard.subsidiaryCount)} valueColor={colors.primary} small />
-          <StatBox label="LOAN RATE" value={formatAnnualRatePercent(annualRate)} valueColor={colors.warning} small />
+          <StatBox label={t.common.companies} value={String(dashboard.subsidiaryCount)} valueColor={colors.primary} small />
+          <StatBox label={t.exec.loanRate} value={formatAnnualRatePercent(annualRate)} valueColor={colors.warning} small />
         </View>
       </Card>
 
-      <SectionHeader title="Backend" subtitle="Account, cloud save and API status" />
+      <SectionHeader title={t.exec.backendTitle} subtitle={t.exec.backendSubtitle} />
       <View style={styles.backendCard}>
         <View style={styles.backendRow}>
-          <Text style={styles.settingLabel}>API</Text>
+          <Text style={styles.settingLabel}>{t.exec.api}</Text>
           <Text style={styles.backendValue} numberOfLines={1}>
-            {apiBaseUrl ?? 'Disabled (requires HTTPS in production)'}
+            {apiBaseUrl ?? t.exec.apiDisabled}
           </Text>
         </View>
         <View style={styles.backendRow}>
-          <Text style={styles.settingLabel}>Status</Text>
+          <Text style={styles.settingLabel}>{t.exec.status}</Text>
           <Text style={[styles.backendValue, backendStatus.connected ? styles.statusOk : styles.statusWarn]}>
-            {backendStatus.enabled
-              ? backendStatus.connected
-                ? 'Connected'
-                : 'Offline'
-              : 'Local only'}
+            {backendStatusLabel}
           </Text>
         </View>
         {backendStatus.playerId ? (
           <View style={styles.backendRow}>
-            <Text style={styles.settingLabel}>Player ID</Text>
+            <Text style={styles.settingLabel}>{t.exec.playerId}</Text>
             <Text style={styles.backendMono} numberOfLines={1}>
               {backendStatus.playerId}
             </Text>
           </View>
         ) : null}
         <View style={styles.backendRow}>
-          <Text style={styles.settingLabel}>Economy config</Text>
+          <Text style={styles.settingLabel}>{t.exec.economyConfig}</Text>
           <Text style={styles.backendValue}>{backendStatus.economyConfigSource}</Text>
         </View>
         {backendStatus.cloudSaveEnabled ? (
           <View style={styles.backendRow}>
-            <Text style={styles.settingLabel}>Last cloud sync</Text>
-            <Text style={styles.backendValue}>{formatSyncTime(backendStatus.lastSyncAtUnix)}</Text>
+            <Text style={styles.settingLabel}>{t.exec.lastCloudSync}</Text>
+            <Text style={styles.backendValue}>
+              {formatSyncTime(backendStatus.lastSyncAtUnix, t.common.never)}
+            </Text>
           </View>
         ) : null}
         {backendStatus.lastError ? <Text style={styles.backendError}>{backendStatus.lastError}</Text> : null}
         {backendStatus.welcomeTitle ? <Text style={styles.welcomeBanner}>{backendStatus.welcomeTitle}</Text> : null}
         {backendStatus.cloudSaveEnabled && backendStatus.connected ? (
           <PrimaryButton
-            label={busy ? 'SYNCING…' : 'SYNC CLOUD SAVE'}
-            onPress={() => run(syncCloudNow, 'Cloud sync')}
-            disabled={busy}
+            label={busy ? t.common.syncing : t.common.syncCloud}
+            onPress={() =>
+              run(syncCloudNow, t.exec.cloudSyncAction, {
+                complete: interpolate(t.common.actionComplete, { title: t.exec.cloudSyncAction }),
+                failed: interpolate(t.common.actionFailed, { title: t.exec.cloudSyncAction }),
+              })
+            }
+            disabled={busy || deletingAccount}
           />
-        ) : null}
-        {backendStatus.connected ? (
-          <Pressable
-            onPress={() => run(requestAccountDeletion, 'Account deletion')}
-            style={styles.deleteRow}
-            disabled={busy}>
-            <Text style={styles.deleteLabel}>Request account deletion</Text>
-          </Pressable>
         ) : null}
       </View>
 
       <SectionHeader
-        title="Finance"
-        subtitle={`Borrow at ${formatAnnualRatePercent(annualRate)} APR — lower rates at higher rank`}
+        title={t.exec.financeTitle}
+        subtitle={interpolate(t.exec.financeSubtitle, { rate: formatAnnualRatePercent(annualRate) })}
       />
       {activeLoans.length === 0 ? (
-        <EmptyState title="No active loans" message="Interest accrues hourly on outstanding balance." />
+        <EmptyState title={t.exec.noLoansTitle} message={t.exec.noLoansMessage} />
       ) : (
         activeLoans.map((loan) => {
           const hourlyPercent = (loan.interestRateHourly * 8760 * 100).toFixed(1);
@@ -140,11 +174,14 @@ export default function ExecScreen() {
               <View>
                 <Text style={styles.loanTitle}>{loan.productId}</Text>
                 <Text style={styles.loanMeta}>
-                  Remaining {formatMoneyCompact(loan.remainingMinor)} · {hourlyPercent}% APR locked
+                  {interpolate(t.exec.loanRemaining, {
+                    amount: formatMoneyCompact(loan.remainingMinor),
+                    rate: hourlyPercent,
+                  })}
                 </Text>
               </View>
               <Pressable onPress={() => repayLoanById(loan.id)} style={styles.repayButton}>
-                <Text style={styles.repayLabel}>REPAY</Text>
+                <Text style={styles.repayLabel}>{t.common.repay}</Text>
               </Pressable>
             </View>
           );
@@ -158,10 +195,13 @@ export default function ExecScreen() {
               <View key={product.id} style={styles.loanOffer}>
                 <Text style={styles.loanTitle}>{product.displayName}</Text>
                 <Text style={styles.loanMeta}>
-                  Up to {formatMoneyCompact(terms.maxAmountMinor)} · {formatAnnualRatePercent(terms.annualRate)} APR
+                  {interpolate(t.exec.loanOfferMeta, {
+                    amount: formatMoneyCompact(terms.maxAmountMinor),
+                    rate: formatAnnualRatePercent(terms.annualRate),
+                  })}
                 </Text>
                 <PrimaryButton
-                  label={`BORROW ${formatMoneyCompact(terms.maxAmountMinor)}`}
+                  label={interpolate(t.exec.borrowAmount, { amount: formatMoneyCompact(terms.maxAmountMinor) })}
                   onPress={() => borrowLoan(product.id, terms.maxAmountMinor)}
                 />
               </View>
@@ -169,34 +209,61 @@ export default function ExecScreen() {
           })
         : null}
 
-      <SectionHeader title="Display currency" subtitle="Display only — simulation stays in USD minor units" />
-      <View style={styles.currencyRow}>
+      <SectionHeader title={t.exec.displayCurrencyTitle} subtitle={t.exec.displayCurrencySubtitle} />
+      <View style={styles.optionRow}>
         {currencyOptions.map((code) => {
           const selected = displayCurrency === code;
           return (
             <Pressable
               key={code}
               onPress={() => setDisplayCurrency(code)}
-              style={[styles.currencyChip, selected && styles.currencyChipSelected]}>
-              <Text style={[styles.currencyLabel, selected && styles.currencyLabelSelected]}>{code}</Text>
+              style={[styles.optionChip, selected && styles.optionChipSelected]}>
+              <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{code}</Text>
             </Pressable>
           );
         })}
       </View>
 
-      <SectionHeader title="Tip" subtitle="Company leadership" />
-      <Text style={styles.tipText}>
-        Hire CEO, CFO, COO and other executives inside each company from HQ — not here. Executives automate tasks and
-        improve performance per subsidiary.
-      </Text>
+      <SectionHeader title={t.exec.languageTitle} subtitle={t.exec.languageSubtitle} />
+      <View style={styles.optionRow}>
+        {LOCALE_CATALOG.map((entry) => {
+          const selected = locale === entry.code;
+          return (
+            <Pressable
+              key={entry.code}
+              onPress={() => setLocale(entry.code as SupportedLocale)}
+              style={[styles.optionChip, selected && styles.optionChipSelected]}>
+              <Text style={[styles.optionLabel, selected && styles.optionLabelSelected]}>{entry.nativeName}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
 
-      <SectionHeader title="Local save" subtitle="Manual persistence" />
+      <SectionHeader title={t.exec.tipTitle} subtitle={t.exec.tipSubtitle} />
+      <Text style={styles.tipText}>{t.exec.tipBody}</Text>
+
+      <SectionHeader title={t.exec.localSaveTitle} subtitle={t.exec.localSaveSubtitle} />
       <Pressable onPress={() => saveNow()} style={styles.settingRow}>
         <View>
-          <Text style={styles.settingLabel}>Save now</Text>
-          <Text style={styles.settingHint}>Writes local save and syncs cloud when connected</Text>
+          <Text style={styles.settingLabel}>{t.common.saveNow}</Text>
+          <Text style={styles.settingHint}>{t.exec.saveHint}</Text>
         </View>
       </Pressable>
+
+      {backendStatus.connected ? (
+        <>
+          <SectionHeader title={t.exec.deleteAccountTitle} subtitle={t.exec.deleteAccountSubtitle} />
+          <Pressable
+            onPress={confirmDeleteAccount}
+            style={[styles.dangerCard, deletingAccount && styles.dangerCardDisabled]}
+            disabled={deletingAccount}>
+            <Text style={styles.dangerTitle}>
+              {deletingAccount ? t.common.deleting : t.exec.deleteAccountConfirmAction}
+            </Text>
+            <Text style={styles.dangerHint}>{t.exec.deleteAccountSubtitle}</Text>
+          </Pressable>
+        </>
+      ) : null}
     </Screen>
   );
 }
@@ -257,13 +324,6 @@ const styles = StyleSheet.create({
   statusWarn: { color: colors.warning },
   backendError: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.danger },
   welcomeBanner: { fontFamily: fonts.body, fontSize: fontSizes.sm, color: colors.primary },
-  deleteRow: { paddingVertical: spacing.xs, alignItems: 'center' },
-  deleteLabel: {
-    fontFamily: fonts.mono,
-    fontSize: fontSizes.xs,
-    color: colors.danger,
-    textDecorationLine: 'underline',
-  },
   loanRow: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -305,15 +365,16 @@ const styles = StyleSheet.create({
     borderColor: `${colors.primary}0a`,
     borderRadius: 8,
     padding: spacing.md,
+    marginBottom: spacing.md,
   },
   settingLabel: { fontFamily: fonts.bodySemiBold, fontSize: fontSizes.lg, color: colors.text },
   settingHint: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, marginTop: 4 },
-  currencyRow: {
+  optionRow: {
     flexDirection: 'row',
     gap: spacing.sm,
     marginBottom: spacing.md,
   },
-  currencyChip: {
+  optionChip: {
     flex: 1,
     borderWidth: 1,
     borderColor: colors.border,
@@ -322,17 +383,43 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: colors.surface,
   },
-  currencyChipSelected: {
+  optionChipSelected: {
     borderColor: `${colors.primary}60`,
     backgroundColor: `${colors.primary}14`,
   },
-  currencyLabel: {
+  optionLabel: {
     fontFamily: fonts.display,
     fontSize: fontSizes.sm,
     color: colors.muted,
     fontWeight: '700',
   },
-  currencyLabelSelected: {
+  optionLabelSelected: {
     color: colors.primary,
+  },
+  dangerCard: {
+    backgroundColor: `${colors.danger}10`,
+    borderWidth: 1,
+    borderColor: `${colors.danger}40`,
+    borderRadius: 8,
+    padding: spacing.md,
+    gap: spacing.xs,
+    marginBottom: spacing.xl,
+  },
+  dangerCardDisabled: {
+    opacity: 0.6,
+  },
+  dangerTitle: {
+    fontFamily: fonts.display,
+    fontSize: fontSizes.md,
+    color: colors.danger,
+    fontWeight: '800',
+    textAlign: 'center',
+  },
+  dangerHint: {
+    fontFamily: fonts.mono,
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    textAlign: 'center',
+    lineHeight: 16,
   },
 });

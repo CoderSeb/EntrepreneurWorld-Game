@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { Screen } from '@/components/Screen';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { StatBox } from '@/components/StatBox';
@@ -25,21 +26,22 @@ export default function CompanyDetailScreen() {
     formatMoneyCompact,
     playerCashMinor,
   } = useGame();
+  const { t } = useTranslation();
 
   const company = id ? getCompanyById(id) : null;
   if (!company) {
     return (
       <Screen scroll={false} contentContainerStyle={styles.missing}>
-        <EmptyState title="Company not found" message="This subsidiary may have been sold or removed." />
-        <PrimaryButton label="BACK" onPress={() => router.back()} />
+        <EmptyState title={t.company.notFoundTitle} message={t.company.notFoundMessage} />
+        <PrimaryButton label={t.common.backButton} onPress={() => router.back()} />
       </Screen>
     );
   }
 
-  const companyTasks = tasks.filter((t) => t.companyId === company.id);
+  const companyTasks = tasks.filter((task) => task.companyId === company.id);
   const executives = getCompanyExecutiveRoles(company.id);
   const hasTaskAutomation = executives.some((role) => role.hired && role.automatesOperations);
-  const operationsTrack = config.upgradeTracks.find((t) => t.id === 'operations');
+  const operationsTrack = config.upgradeTracks.find((track) => track.id === 'operations');
   const levelProgressPercent = Math.round(company.levelProgress * 100);
   const automationMaxed = company.nextAutomationCostMinor === null;
   const canAffordAutomation =
@@ -50,66 +52,81 @@ export default function CompanyDetailScreen() {
       header={
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} hitSlop={12}>
-            <Text style={styles.back}>← Back</Text>
+            <Text style={styles.back}>{t.common.back}</Text>
           </Pressable>
           <View style={styles.headerText}>
             <Text style={[styles.title, { color: company.sectorColor }]}>{company.name}</Text>
             <Text style={styles.subtitle}>
-              {company.industryLabel} · LEVEL {company.level}
+              {interpolate(t.company.levelSubtitle, { industry: company.industryLabel, level: company.level })}
             </Text>
           </View>
         </View>
       }>
       <View style={styles.stats}>
-        <StatBox label="REV/HR" value={formatMoneyCompact(company.revenueMinor)} small />
-        <StatBox label="PROFIT/HR" value={formatMoneyCompact(company.profitMinor)} valueColor={colors.success} small />
-        <StatBox label="EXECUTIVES" value={String(company.hiredExecutiveCount)} small />
+        <StatBox label={t.company.revPerHr} value={formatMoneyCompact(company.revenueMinor)} small />
+        <StatBox label={t.company.profitPerHr} value={formatMoneyCompact(company.profitMinor)} valueColor={colors.success} small />
+        <StatBox label={t.company.executives} value={String(company.hiredExecutiveCount)} small />
       </View>
 
       <HealthBar value={company.health} />
-      <Text style={styles.healthMeta}>Portfolio health {company.health}%</Text>
+      <Text style={styles.healthMeta}>
+        {interpolate(t.company.portfolioHealth, { health: company.health })}
+      </Text>
 
-      <SectionHeader title="Level progress" subtitle="Levels up automatically from company profit" />
+      <SectionHeader title={t.company.levelProgressTitle} subtitle={t.company.levelProgressSubtitle} />
       <HealthBar value={levelProgressPercent} />
       <Text style={styles.healthMeta}>
-        {levelProgressPercent}% toward level {company.level + 1}
+        {interpolate(t.company.levelProgressMeta, {
+          percent: levelProgressPercent,
+          nextLevel: company.level + 1,
+        })}
       </Text>
 
       {operationsTrack ? (
         <>
-          <SectionHeader title="Operations track" subtitle="Invest to scale revenue" />
+          <SectionHeader title={t.company.operationsTrackTitle} subtitle={t.company.operationsTrackSubtitle} />
           <PrimaryButton
-            label={`${operationsTrack.displayName.toUpperCase()} TRACK`}
+            label={interpolate(t.company.trackButton, { name: operationsTrack.displayName.toUpperCase() })}
             onPress={() => upgradeCompanyTrack(company.id, operationsTrack.id)}
           />
         </>
       ) : null}
 
       <SectionHeader
-        title="Automation"
+        title={t.company.automationTitle}
         subtitle={
           automationMaxed
-            ? `Max level ${company.maxAutomationLevel} — revenue and efficiency bonuses active`
-            : 'Upgrade systems to boost revenue (small expense increase)'
+            ? interpolate(t.company.automationMaxed, { level: company.maxAutomationLevel })
+            : t.company.automationSubtitle
         }
       />
       <View style={styles.automationRow}>
-        <StatBox label="LEVEL" value={`${company.automationLevel}/${company.maxAutomationLevel}`} small />
+        <StatBox
+          label={t.common.level}
+          value={`${company.automationLevel}/${company.maxAutomationLevel}`}
+          small
+        />
         {company.nextAutomationCostMinor !== null ? (
-          <StatBox label="NEXT UPGRADE" value={formatMoneyCompact(company.nextAutomationCostMinor)} small />
+          <StatBox
+            label={t.company.nextUpgrade}
+            value={formatMoneyCompact(company.nextAutomationCostMinor)}
+            small
+          />
         ) : null}
       </View>
       {!automationMaxed ? (
         <PrimaryButton
-          label={`UPGRADE AUTOMATION · ${formatMoneyCompact(company.nextAutomationCostMinor ?? 0)}`}
+          label={interpolate(t.company.upgradeAutomation, {
+            cost: formatMoneyCompact(company.nextAutomationCostMinor ?? 0),
+          })}
           onPress={() => upgradeCompanyAutomation(company.id)}
           disabled={!canAffordAutomation}
         />
       ) : null}
 
-      <SectionHeader title="Leadership" subtitle="Hire executives to automate and boost this company" />
+      <SectionHeader title={t.company.leadershipTitle} subtitle={t.company.leadershipSubtitle} />
       {executives.length === 0 ? (
-        <EmptyState title="No roles configured" message="Executive roles will appear for this company type." />
+        <EmptyState title={t.company.noRolesTitle} message={t.company.noRolesMessage} />
       ) : (
         executives.map((role) => (
           <ExecutiveRoleCard
@@ -121,11 +138,15 @@ export default function CompanyDetailScreen() {
       )}
 
       <SectionHeader
-        title="Tasks"
-        subtitle={hasTaskAutomation ? 'CEO/COO automates ready tasks' : `${companyTasks.length} activities`}
+        title={t.company.tasksTitle}
+        subtitle={
+          hasTaskAutomation
+            ? t.company.tasksAutomatedSubtitle
+            : interpolate(t.company.tasksCountSubtitle, { count: companyTasks.length })
+        }
       />
       {companyTasks.length === 0 ? (
-        <EmptyState title="No tasks" message="Tasks unlock as the company levels up." />
+        <EmptyState title={t.company.noTasksTitle} message={t.company.noTasksMessage} />
       ) : (
         companyTasks.map((task) => (
           <View key={task.id} style={styles.taskRow}>
@@ -133,16 +154,16 @@ export default function CompanyDetailScreen() {
               <Text style={styles.taskLabel}>{task.label}</Text>
               <Text style={styles.taskMeta}>
                 {hasTaskAutomation
-                  ? 'Automated'
+                  ? t.common.automated
                   : task.ready
-                    ? 'Ready'
-                    : `${task.cooldownRemaining}s cooldown`}{' '}
-                · +{formatMoneyCompact(task.rewardMinor)}
+                    ? t.common.ready
+                    : interpolate(t.common.cooldownSeconds, { seconds: task.cooldownRemaining })}{' '}
+                {interpolate(t.company.taskReward, { reward: formatMoneyCompact(task.rewardMinor) })}
               </Text>
             </View>
             {!hasTaskAutomation ? (
               <PrimaryButton
-                label="RUN"
+                label={t.common.run}
                 onPress={() => performCompanyActivity(task.companyId, task.activityId)}
                 disabled={!task.ready}
                 style={styles.runButton}

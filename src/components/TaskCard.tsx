@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
@@ -21,6 +22,8 @@ export function TaskCard({
   onPress,
 }: TaskCardProps) {
   const { formatMoneyCompact } = useGame();
+  const { t } = useTranslation();
+
   return (
     <Pressable
       onPress={onPress}
@@ -37,7 +40,7 @@ export function TaskCard({
       </View>
       <Text style={styles.label}>{label}</Text>
       <Text style={styles.meta}>
-        {ready ? 'READY' : `COOLDOWN ${cooldownRemaining}s`}
+        {ready ? t.common.ready : interpolate(t.task.cooldown, { seconds: cooldownRemaining })}
       </Text>
     </Pressable>
   );

@@ -308,15 +308,15 @@ function fallbackLocal(
   };
 }
 
-export async function requestAccountDeletion(session: AuthSession): Promise<{ success: boolean; message: string }> {
+export async function deletePlayerAccount(session: AuthSession): Promise<{ success: boolean; message: string }> {
   const baseUrl = getApiBaseUrl();
   if (!baseUrl) {
     return { success: false, message: 'Backend is not configured' };
   }
 
   const api = new ApiClient(baseUrl);
-  const result = await api.post<{ playerId: string; status: string; requestedAt: string }>(
-    '/api/v1/player/delete-request',
+  const result = await api.post<{ playerId: string; status: string; deletedAt: string }>(
+    '/api/v1/player/delete-account',
     {},
     session.accessToken,
   );
@@ -325,5 +325,5 @@ export async function requestAccountDeletion(session: AuthSession): Promise<{ su
     return { success: false, message: result.error.message };
   }
 
-  return { success: true, message: `Deletion requested (${result.data.status})` };
+  return { success: true, message: 'Account deleted' };
 }

@@ -101,6 +101,10 @@ export async function saveGame(appState: AppState, config: EconomyConfig, nowUni
   return ok(saveData);
 }
 
+export async function clearLocalSave(): Promise<void> {
+  await AsyncStorage.multiRemove([SAVE_KEY, BACKUP_KEY]);
+}
+
 export function applyNewGameDefaults(appState: AppState, config: EconomyConfig, nowUnix: number): void {
   appState.player.playerId = appState.player.playerId || 'local-player';
   appState.player.cashBalance = MoneyValue.fromMinor(config.startingCashMinor);

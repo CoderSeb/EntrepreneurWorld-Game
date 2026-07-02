@@ -62,3 +62,22 @@ export type ClientEventRequest = {
   clientVersion: string;
   properties: Record<string, string | number | boolean>;
 };
+
+export type LeaderboardBoard = 'net_worth' | 'business_rank' | 'subsidiaries';
+
+export type LeaderboardEntryDto = {
+  rank: number;
+  playerId: string;
+  displayName: string;
+  netWorthMinor: number;
+  businessRank: number;
+  subsidiaryCount: number;
+  isCurrentPlayer: boolean;
+};
+
+export type LeaderboardResponse = {
+  board: LeaderboardBoard;
+  generatedAt: string;
+  entries: LeaderboardEntryDto[];
+  currentPlayer: LeaderboardEntryDto | null;
+};

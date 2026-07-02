@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View, Pressable } from 'react-native';
 import { router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { Screen } from '@/components/Screen';
 import { HealthBar } from '@/components/HealthBar';
 import { StatBox } from '@/components/StatBox';
@@ -13,19 +14,23 @@ import { fonts, fontSizes } from '@/theme/typography';
 
 export default function CorpsScreen() {
   const { dashboard, companies, tasks, performCompanyActivity, formatMoneyCompact } = useGame();
+  const { t } = useTranslation();
 
   return (
     <Screen
       header={
         <View>
-          <Text style={styles.headerTitle}>Portfolio</Text>
+          <Text style={styles.headerTitle}>{t.corps.title}</Text>
           <Text style={styles.headerMeta}>
-            {dashboard.subsidiaryCount}/{dashboard.maxSubsidiaries} subsidiary slots
+            {interpolate(t.corps.slotsMeta, {
+              used: dashboard.subsidiaryCount,
+              max: dashboard.maxSubsidiaries,
+            })}
           </Text>
         </View>
       }>
       {companies.length === 0 ? (
-        <EmptyState title="No subsidiaries" message="Complete onboarding or unlock slots via business rank." />
+        <EmptyState title={t.corps.noSubsidiariesTitle} message={t.corps.noSubsidiariesMessage} />
       ) : (
         companies.map((c) => (
           <Pressable
@@ -43,15 +48,15 @@ export default function CorpsScreen() {
               </Text>
             </View>
             <View style={styles.stats}>
-              <StatBox label="REVENUE/HR" value={formatMoneyCompact(c.revenueMinor)} small />
+              <StatBox label={t.corps.revenuePerHr} value={formatMoneyCompact(c.revenueMinor)} small />
               <StatBox
-                label="PROFIT/HR"
+                label={t.corps.profitPerHr}
                 value={formatMoneyCompact(c.profitMinor)}
                 valueColor={c.sectorColor}
                 small
               />
               <StatBox
-                label="HEALTH"
+                label={t.common.health}
                 value={`${c.health}%`}
                 valueColor={c.health > 60 ? colors.success : colors.warning}
                 small
@@ -64,9 +69,12 @@ export default function CorpsScreen() {
 
       <FoundCompanyForm />
 
-      <SectionHeader title="Active tasks" subtitle={`${tasks.length} ready or cooling down`} />
+      <SectionHeader
+        title={t.corps.activeTasks}
+        subtitle={interpolate(t.corps.activeTasksSubtitle, { count: tasks.length })}
+      />
       {tasks.length === 0 ? (
-        <EmptyState title="No tasks" message="Tasks appear when subsidiaries are operational." />
+        <EmptyState title={t.corps.noTasksTitle} message={t.corps.noTasksMessage} />
       ) : (
         tasks.map((task) => (
           <TaskCard

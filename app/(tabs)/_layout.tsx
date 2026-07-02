@@ -1,9 +1,12 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useTranslation } from '@/i18n';
 import { colors } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
+
   return (
     <Tabs
       screenOptions={{
@@ -28,28 +31,28 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: 'HQ',
+          title: t.tabs.hq,
           tabBarIcon: ({ color, size }) => <Ionicons name="bar-chart" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="corps"
         options={{
-          title: 'CORPS',
+          title: t.tabs.corps,
           tabBarIcon: ({ color, size }) => <Ionicons name="business" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="market"
         options={{
-          title: 'MARKET',
+          title: t.tabs.market,
           tabBarIcon: ({ color, size }) => <Ionicons name="trending-up" size={size} color={color} />,
         }}
       />
       <Tabs.Screen
         name="exec"
         options={{
-          title: 'EXEC',
+          title: t.tabs.exec,
           tabBarIcon: ({ color, size }) => <Ionicons name="briefcase" size={size} color={color} />,
         }}
       />

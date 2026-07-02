@@ -3,6 +3,7 @@ import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
+import { interpolate, useTranslation } from '@/i18n';
 import { Screen } from '@/components/Screen';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { StatBox } from '@/components/StatBox';
@@ -15,6 +16,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 
 export default function OnboardingScreen() {
   const { completeOnboarding, config, formatMoneyCompact } = useGame();
+  const { t } = useTranslation();
   const [step, setStep] = useState(0);
   const [congName, setCongName] = useState('');
   const [compName, setCompName] = useState('');
@@ -23,6 +25,7 @@ export default function OnboardingScreen() {
   const industries = Object.values(config.industries).filter((i) => i.minBusinessRank <= 1);
   const selectedIndustry = industryId ? getIndustry(config, industryId) : null;
   const selectedPresentation = selectedIndustry ? resolveIndustryPresentation(selectedIndustry) : null;
+  const launchName = compName ? compName.toUpperCase() : t.onboarding.launchFallback;
 
   const finish = () => {
     if (!industryId || congName.trim().length < 2 || compName.trim().length < 2) return;
@@ -36,56 +39,65 @@ export default function OnboardingScreen() {
     <Screen scroll contentContainerStyle={styles.content}>
       {step === 0 && (
         <LinearGradient colors={['#0d1a2e', colors.backgroundDeep, colors.background]} style={styles.hero}>
-          <Text style={styles.kicker}>WELCOME TO</Text>
-          <Text style={styles.heroTitle}>ENTREPRENEUR{'\n'}WORLD</Text>
-          <Text style={styles.season}>SEASON IV</Text>
-          <Text style={styles.body}>
-            Build a global conglomerate. Manage companies, hire executives, and dominate markets.
-          </Text>
-          <PrimaryButton label="BEGIN YOUR EMPIRE →" onPress={() => setStep(1)} />
+          <Text style={styles.kicker}>{t.onboarding.welcomeKicker}</Text>
+          <Text style={styles.heroTitle}>{t.onboarding.title}</Text>
+          <Text style={styles.season}>{t.onboarding.season}</Text>
+          <Text style={styles.body}>{t.onboarding.intro}</Text>
+          <PrimaryButton label={t.onboarding.begin} onPress={() => setStep(1)} />
         </LinearGradient>
       )}
 
       {step === 1 && (
         <View style={styles.stepBlock}>
-          <Text style={styles.stepKicker}>STEP 1 OF 2</Text>
-          <Text style={styles.stepTitle}>Name your conglomerate</Text>
-          <Text style={styles.fieldLabel}>CONGLOMERATE NAME</Text>
+          <Text style={styles.stepKicker}>{t.onboarding.step1of2}</Text>
+          <Text style={styles.stepTitle}>{t.onboarding.nameConglomerate}</Text>
+          <Text style={styles.fieldLabel}>{t.common.conglomerateName}</Text>
           <TextInput
             value={congName}
             onChangeText={setCongName}
-            placeholder="e.g. Zenith Global Holdings"
+            placeholder={t.onboarding.conglomeratePlaceholder}
             placeholderTextColor={colors.muted}
             style={[styles.input, congName.length >= 2 && styles.inputValid]}
             maxLength={32}
           />
           <Card accentColor={colors.warning} style={styles.statsCard}>
-            <Text style={styles.cardKicker}>YOUR STARTING POSITION</Text>
+            <Text style={styles.cardKicker}>{t.onboarding.startingPosition}</Text>
             <View style={styles.statsGrid}>
-              <StatBox label="SEED CAPITAL" value={formatMoneyCompact(config.startingCashMinor)} valueColor={colors.primary} />
-              <StatBox label="COMPANY SLOTS" value={`${config.companyLimits[0]?.maxCompanies ?? 2}`} />
-              <StatBox label="STARTING RANK" value="RANK 1" valueColor={colors.muted} />
-              <StatBox label="HOLDING COST" value={formatMoneyCompact(config.holdingCompanyCostMinor)} />
+              <StatBox
+                label={t.onboarding.seedCapital}
+                value={formatMoneyCompact(config.startingCashMinor)}
+                valueColor={colors.primary}
+              />
+              <StatBox
+                label={t.onboarding.companySlots}
+                value={`${config.companyLimits[0]?.maxCompanies ?? 2}`}
+              />
+              <StatBox
+                label={t.onboarding.startingRank}
+                value={`${t.common.rank} 1`}
+                valueColor={colors.muted}
+              />
+              <StatBox label={t.onboarding.holdingCost} value={formatMoneyCompact(config.holdingCompanyCostMinor)} />
             </View>
           </Card>
-          <PrimaryButton label="CONTINUE →" onPress={() => setStep(2)} disabled={congName.trim().length < 2} />
+          <PrimaryButton label={t.onboarding.continue} onPress={() => setStep(2)} disabled={congName.trim().length < 2} />
         </View>
       )}
 
       {step === 2 && (
         <View style={styles.stepBlock}>
-          <Text style={styles.stepKicker}>STEP 2 OF 2</Text>
-          <Text style={styles.stepTitle}>Choose a sector and give your company a name</Text>
-          <Text style={styles.fieldLabel}>COMPANY NAME</Text>
+          <Text style={styles.stepKicker}>{t.onboarding.step2of2}</Text>
+          <Text style={styles.stepTitle}>{t.onboarding.chooseSector}</Text>
+          <Text style={styles.fieldLabel}>{t.common.companyName}</Text>
           <TextInput
             value={compName}
             onChangeText={setCompName}
-            placeholder="e.g. Apex Dynamics"
+            placeholder={t.onboarding.companyPlaceholder}
             placeholderTextColor={colors.muted}
             style={[styles.input, compName.length >= 2 && styles.inputValid]}
             maxLength={28}
           />
-          <Text style={styles.fieldLabel}>SELECT INDUSTRY</Text>
+          <Text style={styles.fieldLabel}>{t.common.selectIndustry}</Text>
           <View style={styles.sectorGrid}>
             {industries.map((industry) => (
               <SectorSelectCard
@@ -99,12 +111,12 @@ export default function OnboardingScreen() {
           </View>
           {selectedPresentation ? (
             <Card accentColor={selectedPresentation.accentColor} style={styles.focusCard}>
-              <Text style={styles.focusKicker}>BEST FOCUS</Text>
+              <Text style={styles.focusKicker}>{t.common.bestFocus}</Text>
               <Text style={styles.focusHint}>{selectedPresentation.focusHint}</Text>
             </Card>
           ) : null}
           <PrimaryButton
-            label={`LAUNCH ${compName ? compName.toUpperCase() : 'COMPANY'} →`}
+            label={interpolate(t.onboarding.launchCompany, { name: launchName })}
             onPress={finish}
             disabled={!industryId || compName.trim().length < 2}
           />

@@ -1,6 +1,22 @@
-import { en } from '@/i18n/en';
+export { interpolate } from '@/i18n/interpolate';
+export {
+  detectDeviceLocale,
+  getLocaleFromSettings,
+  isSupportedLocale,
+  LOCALE_SETTING_KEY,
+} from '@/i18n/LocaleService';
+export {
+  DEFAULT_LOCALE,
+  getTranslations,
+  LOCALE_CATALOG,
+  type SupportedLocale,
+} from '@/i18n/locales';
+export type { TranslationDictionary } from '@/i18n/types';
 
-/** Returns localized strings. English-only until additional locales are added. */
-export function t(): typeof en {
-  return en;
+import { useGame } from '@/context/GameContext';
+
+/** Active UI strings for the current locale. Re-renders when the player changes language. */
+export function useTranslation() {
+  const { locale, setLocale, strings } = useGame();
+  return { locale, setLocale, t: strings };
 }
