@@ -8,6 +8,7 @@ import { fail, ok, OperationResult } from '@/domain/core/OperationResult';
 import { migrateSavePayload, SaveData, CURRENT_SCHEMA_VERSION } from '@/domain/save/SaveData';
 import { saveDataFromDictionary, saveDataToDictionary } from '@/domain/save/SaveSerializer';
 import { attachChecksum, verifyChecksum } from '@/domain/save/SaveIntegrityService';
+import { MoneyValue } from '@/domain/money/MoneyValue';
 import { calculateConglomerateNetWorthMinor, calculatePersonalNetWorthMinor } from '@/domain/progression/ProgressionService';
 import { calculateHourlyNetMinor } from '@/domain/economy/CompanyIncomeService';
 

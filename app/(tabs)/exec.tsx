@@ -21,6 +21,7 @@ import { SupportedLocale } from '@/i18n/locales';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { TreasuryPanel } from '@/components/TreasuryPanel';
+import { getApiBaseUrl } from '@/config/backendConfig';
 
 function formatSyncTime(unix: number | null, neverLabel: string): string {
   if (!unix) {
