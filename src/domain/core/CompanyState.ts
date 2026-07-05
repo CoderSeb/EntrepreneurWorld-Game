@@ -3,7 +3,7 @@ import { CompanyKind, CompanyKinds } from '@/domain/core/CompanyKinds';
 import { CompanyActiveEffect } from '@/domain/companies/ActivityEffectService';
 import { ExecutiveContract } from '@/domain/companies/ExecutiveContracts';
 
-import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyService';
+import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyMultipliers';
 
 export type CompanyState = {
   id: string;

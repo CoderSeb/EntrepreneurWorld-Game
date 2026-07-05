@@ -32,10 +32,8 @@ export function CashHeaderBar() {
   return (
     <View style={styles.root}>
       <View style={styles.left}>
-        {cloudSync.status === 'offline' ? (
+        {cloudSync.lastSyncStatus === 'offline' ? (
           <Text style={styles.offline}>{t.header.backendOffline}</Text>
-        ) : cloudSync.status === 'pending' ? (
-          <Text style={styles.offline}>{t.header.cloudSyncPending}</Text>
         ) : null}
         <View style={styles.payoutHeaderRow}>
           <Text style={styles.tickLabel}>{t.header.nextPayout}</Text>

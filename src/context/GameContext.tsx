@@ -21,7 +21,8 @@ import {
   saveGame,
 } from '@/domain/save/SaveService';
 import { refreshEvents } from '@/domain/market/MarketEventService';
-import { simulateOfflineForApp, simulateTick } from '@/domain/economy/EconomySimulator';
+import { applyCompanyIncomeForHours } from '@/domain/economy/CompanyIncomeService';
+import { simulateOfflineForApp } from '@/domain/economy/EconomySimulator';
 import { accrueLoanInterest, hireExecutiveRole, repayLoan, takeLoan, upgradeAutomation } from '@/domain/companies/ManagementService';
 import { adjustEmployeeCount, setPayrollLevel } from '@/domain/companies/EmployeeService';
 import { processCompanyProgression } from '@/domain/companies/CompanyProgressionService';
@@ -53,7 +54,6 @@ import { fonts, fontSizes } from '@/theme/typography';
 import { guardOfflineDuration } from '@/domain/security/TimeManipulationGuard';
 import { getLocaleFromSettings, LOCALE_SETTING_KEY } from '@/i18n/LocaleService';
 import { getTranslations, SupportedLocale } from '@/i18n/locales';
-import type { TranslationDictionary } from '@/i18n/types';
 import { isBackendEnabled } from '@/config/backendConfig';
 import {
   BackendStatus,
@@ -64,7 +64,6 @@ import {
 import {
   buildCloudSyncPresentation,
   CloudSyncPresentation,
-  CloudSyncStatus,
   shouldScheduleCloudUpload,
 } from '@/services/backend/CloudSyncPresentation';
 import { AuthSession, clearAuthSession } from '@/services/auth/authSessionStore';
@@ -83,6 +82,8 @@ import {
   getDisplayCurrencyFromSettings,
   setActiveDisplayCurrency,
 } from '@/domain/money/MoneyFormatter';
+import { GameFormatContext, GameFormatContextValue } from '@/context/GameFormatContext';
+import { GameBackendContext } from '@/context/GameBackendContext';
 
 const TICK_SECONDS = 1;
 const OFFLINE_THRESHOLD_SECONDS = 60;
@@ -163,16 +164,12 @@ type GameContextValue = {
   availableCompanyFundingMinor: (companyId: string) => number;
   availableFoundingCashMinor: number;
   foundingFunding: ReturnType<typeof getFoundingFundingBreakdown>;
-  displayCurrency: DisplayCurrencyCode;
-  setDisplayCurrency: (currency: DisplayCurrencyCode) => void;
-  locale: SupportedLocale;
-  setLocale: (locale: SupportedLocale) => void;
-  strings: TranslationDictionary;
-  formatMoneyCompact: (minorUnits: number) => string;
-  formatMoney: (minorUnits: number) => string;
-};
+} & GameFormatContextValue;
 
-const GameContext = createContext<GameContextValue | null>(null);
+const GameContext = createContext<Omit<
+  GameContextValue,
+  keyof GameFormatContextValue
+> | null>(null);
 
 function nowUnix(): number {
   return Math.floor(Date.now() / 1000);
@@ -355,7 +352,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return;
       }
 
-      simulateTick(state.player, state.companies, TICK_SECONDS, config, state.marketState);
+      applyCompanyIncomeForHours(
+        state.companies,
+        TICK_SECONDS / 3600,
+        config,
+        state.marketState,
+      );
       accrueLoanInterest(state, TICK_SECONDS);
       processCompanyProgression(state, config, TICK_SECONDS, nowUnix());
 
@@ -434,11 +436,32 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const strings = useMemo(() => getTranslations(locale), [locale]);
 
+  const backendValue = useMemo(
+    () => ({
+      backendStatus,
+      config,
+    }),
+    [backendStatus, config],
+  );
+
+  const formatValue = useMemo(
+    (): GameFormatContextValue => ({
+      displayCurrency,
+      setDisplayCurrency,
+      locale,
+      setLocale,
+      strings,
+      formatMoneyCompact: (minorUnits: number) => formatMoneyCompact(minorUnits, displayCurrency),
+      formatMoney: (minorUnits: number) => formatMoney(minorUnits, displayCurrency),
+    }),
+    [displayCurrency, setDisplayCurrency, locale, setLocale, strings],
+  );
+
   useEffect(() => {
     setActiveDisplayCurrency(displayCurrency);
   }, [displayCurrency]);
 
-  const value = useMemo((): GameContextValue => {
+  const value = useMemo((): Omit<GameContextValue, keyof GameFormatContextValue> => {
     void tick;
     const state = appStateRef.current;
     const now = nowUnix();
@@ -449,7 +472,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
       ready,
       config,
       backendStatus,
-      cloudSync: buildCloudSyncPresentation(backendStatus, cloudSyncDirty, cloudSyncSyncing),
+      cloudSync: buildCloudSyncPresentation(
+        backendStatus,
+        cloudSyncDirty,
+        cloudSyncSyncing,
+        now,
+      ),
       lastSimTickMs,
       lastSaveError,
       dashboard,
@@ -658,15 +686,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
       },
       availableFoundingCashMinor: availableFundingForFoundingMinor(state),
       foundingFunding: getFoundingFundingBreakdown(state),
-      displayCurrency,
-      setDisplayCurrency,
-      locale,
-      setLocale,
-      strings,
-      formatMoneyCompact: (minorUnits: number) => formatMoneyCompact(minorUnits, displayCurrency),
-      formatMoney: (minorUnits: number) => formatMoney(minorUnits, displayCurrency),
     };
-  }, [tick, ready, config, backendStatus, cloudSyncDirty, cloudSyncSyncing, lastSimTickMs, lastSaveError, offlineSummary, mutate, persistGame, scheduleCloudSync, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
+  }, [tick, ready, config, backendStatus, cloudSyncDirty, cloudSyncSyncing, lastSimTickMs, lastSaveError, offlineSummary, mutate, persistGame, scheduleCloudSync, strings]);
 
   useEffect(() => {
     if (ready) {
@@ -674,16 +695,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [ready]);
 
-  if (!ready) {
-    return (
-      <View style={styles.bootScreen}>
-        <ActivityIndicator size="large" color={colors.primary} />
-        <Text style={styles.bootText}>{strings.common.loading}</Text>
-      </View>
-    );
-  }
-
-  return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
+  return (
+    <GameFormatContext.Provider value={formatValue}>
+      <GameBackendContext.Provider value={backendValue}>
+        {!ready ? (
+          <View style={styles.bootScreen}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.bootText}>{strings.common.loading}</Text>
+          </View>
+        ) : (
+          <GameContext.Provider value={value}>{children}</GameContext.Provider>
+        )}
+      </GameBackendContext.Provider>
+    </GameFormatContext.Provider>
+  );
 }
 
 const styles = StyleSheet.create({
@@ -702,12 +727,17 @@ const styles = StyleSheet.create({
   },
 });
 
+export { useGameBackend } from '@/context/GameBackendContext';
+export { useGameFormat } from '@/context/GameFormatContext';
+export type { GameFormatContextValue } from '@/context/GameFormatContext';
+
 export function useGame(): GameContextValue {
   const ctx = useContext(GameContext);
-  if (!ctx) {
+  const format = useContext(GameFormatContext);
+  if (!ctx || !format) {
     throw new Error('useGame must be used within GameProvider');
   }
-  return ctx;
+  return { ...ctx, ...format };
 }
 
 /** @deprecated Use useGame */

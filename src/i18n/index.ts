@@ -13,10 +13,10 @@ export {
 } from '@/i18n/locales';
 export type { TranslationDictionary } from '@/i18n/types';
 
-import { useGame } from '@/context/GameContext';
+import { useGameFormat } from '@/context/GameFormatContext';
 
 /** Active UI strings for the current locale. Re-renders when the player changes language. */
 export function useTranslation() {
-  const { locale, setLocale, strings } = useGame();
+  const { locale, setLocale, strings } = useGameFormat();
   return { locale, setLocale, t: strings };
 }

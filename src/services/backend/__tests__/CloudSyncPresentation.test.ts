@@ -1,7 +1,8 @@
 import {
   BACKGROUND_CLOUD_UPLOAD_INTERVAL_SECONDS,
   buildCloudSyncPresentation,
-  deriveCloudSyncStatus,
+  computeNextSyncPlannedAtUnix,
+  deriveLastSyncStatus,
   shouldScheduleCloudUpload,
 } from '@/services/backend/CloudSyncPresentation';
 import { BackendStatus } from '@/services/backend/BackendBootstrapService';
@@ -22,12 +23,14 @@ function createStatus(overrides: Partial<BackendStatus> = {}): BackendStatus {
 }
 
 describe('CloudSyncPresentation', () => {
-  it('derives synced when connected and not dirty', () => {
-    expect(deriveCloudSyncStatus(createStatus(), false, false)).toBe('synced');
+  it('reports success while local changes wait for the upload throttle', () => {
+    expect(deriveLastSyncStatus(createStatus(), false)).toBe('success');
   });
 
-  it('derives pending when local changes are not uploaded yet', () => {
-    expect(deriveCloudSyncStatus(createStatus(), true, false)).toBe('pending');
+  it('plans the next automatic sync while local changes are queued', () => {
+    const nowUnix = 1_030;
+    const planned = computeNextSyncPlannedAtUnix(nowUnix, createStatus(), true, false);
+    expect(planned).toBe(1_000 + BACKGROUND_CLOUD_UPLOAD_INTERVAL_SECONDS);
   });
 
   it('throttles background uploads until the interval passes', () => {
@@ -48,8 +51,9 @@ describe('CloudSyncPresentation', () => {
   });
 
   it('builds presentation with sync action when cloud save is available', () => {
-    const presentation = buildCloudSyncPresentation(createStatus(), false, false);
-    expect(presentation.status).toBe('synced');
+    const presentation = buildCloudSyncPresentation(createStatus(), true, false, 1_030);
+    expect(presentation.lastSyncStatus).toBe('success');
+    expect(presentation.nextSyncPlannedAtUnix).toBe(1_120);
     expect(presentation.canSyncNow).toBe(true);
   });
 });

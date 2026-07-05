@@ -8,6 +8,7 @@ import { calculateOfflineProgress } from '@/domain/economy/OfflineProgressCalcul
 import { createSimulationResult, SimulationResult } from '@/domain/economy/SimulationResult';
 import { EconomyConfig } from '@/domain/config/EconomyConfig';
 
+/** Full tick with aggregate metrics — used by balance simulation and tests. Live UI uses applyCompanyIncomeForHours directly. */
 export function simulateTick(
   _player: PlayerState,
   companies: CompanyState[],

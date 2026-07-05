@@ -1,4 +1,5 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
+import { CompanyState } from '@/domain/core/CompanyState';
 import { createAppState } from '@/domain/core/AppState';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { parseEconomyConfig } from '@/domain/config/EconomyConfig';
@@ -19,7 +20,7 @@ describe('ActivityEffectService', () => {
   const serveActivity = config.activities.find((entry) => entry.id === 'serve_customers')!;
   const launchActivity = config.activities.find((entry) => entry.id === 'launch_campaign')!;
 
-  function createCafeCompany() {
+  function createCafeCompany(): CompanyState {
     return {
       id: 'sub-1',
       companyKind: CompanyKinds.SUBSIDIARY,
@@ -74,7 +75,7 @@ describe('ActivityEffectService', () => {
     applyActivityEffect(company, serveActivity, 1_200, { instantCashMinor: 0 });
 
     expect(company.activeEffects).toHaveLength(1);
-    expect(company.activeEffects[0].expiresAtUnix).toBe(1_000 + serveActivity.durationSeconds);
+    expect(company.activeEffects[0]?.expiresAtUnix).toBe(1_000 + serveActivity.durationSeconds);
     expect(getActivityRevenueMultiplier(company, 1_200)).toBe(serveActivity.effectMultiplier);
   });
 
@@ -88,7 +89,9 @@ describe('ActivityEffectService', () => {
 
     const blocked = performActivity(state, config, company, serveActivity, 1_100);
     expect(blocked.success).toBe(false);
-    expect(blocked.errorCode).toBe('activity_on_cooldown');
+    if (!blocked.success) {
+      expect(blocked.errorCode).toBe('activity_on_cooldown');
+    }
   });
 
   it('grants instant cash based on company revenue minutes', () => {

@@ -1,4 +1,4 @@
-import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyService';
+import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyMultipliers';
 import type { TranslationDictionary } from '@/i18n/types';
 
 const POLICY_KEYS: Record<ExecutiveAutomationPolicy, keyof TranslationDictionary['company']> = {
@@ -14,8 +14,4 @@ export function getAutomationPolicyLabel(
   translations: TranslationDictionary,
 ): string {
   return translations.company[POLICY_KEYS[policy]];
-}
-
-export function getAutomationPolicyShortLabel(policy: ExecutiveAutomationPolicy): string {
-  return policy.replace(/_/g, ' ');
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useGame } from '@/context/GameContext';
+import { useGameBackend, useGameFormat } from '@/context/GameContext';
 import { interpolate, useTranslation } from '@/i18n';
 import { SectionHeader } from '@/components/SectionHeader';
 import { EmptyState } from '@/components/EmptyState';
@@ -39,7 +39,8 @@ function boardLabel(board: LeaderboardBoard, t: ReturnType<typeof useTranslation
 }
 
 export function LeaderboardSection() {
-  const { backendStatus, formatMoneyCompact } = useGame();
+  const { backendStatus } = useGameBackend();
+  const { formatMoneyCompact } = useGameFormat();
   const { t } = useTranslation();
   const [board, setBoard] = useState<LeaderboardBoard>('net_worth');
   const [loading, setLoading] = useState(false);
@@ -64,6 +65,9 @@ export function LeaderboardSection() {
         return;
       }
       setData(result.data);
+    } catch {
+      setData(null);
+      setError(t.leaderboard.errorTitle);
     } finally {
       setLoading(false);
     }

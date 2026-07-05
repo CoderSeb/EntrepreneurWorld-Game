@@ -1,5 +1,5 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useGame } from '@/context/GameContext';
+import { useGameFormat } from '@/context/GameContext';
 import { interpolate, useTranslation } from '@/i18n';
 import { formatDurationSeconds } from '@/domain/time/DurationFormat';
 import { colors, spacing } from '@/theme/tokens';
@@ -28,7 +28,7 @@ export function TaskCard({
   cooldownRemaining,
   onPress,
 }: TaskCardProps) {
-  const { formatMoneyCompact } = useGame();
+  const { formatMoneyCompact } = useGameFormat();
   const { t } = useTranslation();
 
   const cashPreviewMinor = instantCashPreviewMinor > 0 ? instantCashPreviewMinor : rewardMinor;

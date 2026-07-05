@@ -1,19 +1,19 @@
 import { BackendStatus } from '@/services/backend/BackendBootstrapService';
 
-export type CloudSyncStatus =
-  | 'disabled'
-  | 'offline'
-  | 'unavailable'
-  | 'syncing'
-  | 'pending'
-  | 'synced'
-  | 'error';
-
 export const BACKGROUND_CLOUD_UPLOAD_INTERVAL_SECONDS = 120;
 
+export type CloudSyncLastStatus =
+  | 'disabled'
+  | 'unavailable'
+  | 'offline'
+  | 'syncing'
+  | 'error'
+  | 'success';
+
 export type CloudSyncPresentation = {
-  status: CloudSyncStatus;
+  lastSyncStatus: CloudSyncLastStatus;
   lastSyncAtUnix: number | null;
+  nextSyncPlannedAtUnix: number | null;
   statusMessage: string | null;
   canSyncNow: boolean;
 };
@@ -36,11 +36,10 @@ export function shouldScheduleCloudUpload(
   return nowUnix - lastSuccessfulSyncAtUnix >= BACKGROUND_CLOUD_UPLOAD_INTERVAL_SECONDS;
 }
 
-export function deriveCloudSyncStatus(
+export function deriveLastSyncStatus(
   backendStatus: BackendStatus,
-  dirty: boolean,
   syncing: boolean,
-): CloudSyncStatus {
+): CloudSyncLastStatus {
   if (!backendStatus.enabled) {
     return 'disabled';
   }
@@ -56,17 +55,33 @@ export function deriveCloudSyncStatus(
   if (backendStatus.lastError) {
     return 'error';
   }
-  if (dirty) {
-    return 'pending';
-  }
-  return 'synced';
+  return 'success';
 }
 
-export function cloudSyncStatusLabel(
-  status: CloudSyncStatus,
+export function computeNextSyncPlannedAtUnix(
+  nowUnix: number,
+  backendStatus: BackendStatus,
+  dirty: boolean,
+  syncing: boolean,
+): number | null {
+  if (!backendStatus.enabled || !backendStatus.connected || !backendStatus.cloudSaveEnabled) {
+    return null;
+  }
+  if (syncing || !dirty) {
+    return null;
+  }
+  if (backendStatus.lastSyncAtUnix == null) {
+    return nowUnix;
+  }
+
+  const plannedAt = backendStatus.lastSyncAtUnix + BACKGROUND_CLOUD_UPLOAD_INTERVAL_SECONDS;
+  return Math.max(plannedAt, nowUnix);
+}
+
+export function lastSyncStatusLabel(
+  status: CloudSyncLastStatus,
   labels: {
-    synced: string;
-    pending: string;
+    success: string;
     syncing: string;
     offline: string;
     unavailable: string;
@@ -75,10 +90,8 @@ export function cloudSyncStatusLabel(
   },
 ): string {
   switch (status) {
-    case 'synced':
-      return labels.synced;
-    case 'pending':
-      return labels.pending;
+    case 'success':
+      return labels.success;
     case 'syncing':
       return labels.syncing;
     case 'offline':
@@ -90,7 +103,7 @@ export function cloudSyncStatusLabel(
     case 'error':
       return labels.error;
     default:
-      return labels.synced;
+      return labels.success;
   }
 }
 
@@ -98,12 +111,19 @@ export function buildCloudSyncPresentation(
   backendStatus: BackendStatus,
   dirty: boolean,
   syncing: boolean,
+  nowUnix: number = Math.floor(Date.now() / 1000),
 ): CloudSyncPresentation {
-  const status = deriveCloudSyncStatus(backendStatus, dirty, syncing);
+  const lastSyncStatus = deriveLastSyncStatus(backendStatus, syncing);
 
   return {
-    status,
+    lastSyncStatus,
     lastSyncAtUnix: backendStatus.lastSyncAtUnix,
+    nextSyncPlannedAtUnix: computeNextSyncPlannedAtUnix(
+      nowUnix,
+      backendStatus,
+      dirty,
+      syncing,
+    ),
     statusMessage: backendStatus.lastError,
     canSyncNow:
       backendStatus.enabled

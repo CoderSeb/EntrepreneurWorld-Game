@@ -18,7 +18,7 @@ import {
 import { getLoanProductLabel } from '@/i18n/configLabels';
 import { DisplayCurrencyCode } from '@/domain/money/MoneyFormatter';
 import { SupportedLocale } from '@/i18n/locales';
-import { cloudSyncStatusLabel } from '@/services/backend/CloudSyncPresentation';
+import { lastSyncStatusLabel } from '@/services/backend/CloudSyncPresentation';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { TreasuryPanel } from '@/components/TreasuryPanel';
@@ -28,6 +28,24 @@ function formatSyncTime(unix: number | null, neverLabel: string): string {
     return neverLabel;
   }
   return new Date(unix * 1000).toLocaleString();
+}
+
+function formatNextSyncPlanned(
+  plannedAtUnix: number | null,
+  labels: {
+    automatic: string;
+    soon: string;
+    whenOnline: string;
+  },
+): string {
+  if (plannedAtUnix == null) {
+    return labels.automatic;
+  }
+  const nowUnix = Math.floor(Date.now() / 1000);
+  if (plannedAtUnix <= nowUnix + 60) {
+    return labels.soon;
+  }
+  return new Date(plannedAtUnix * 1000).toLocaleString();
 }
 
 export default function ExecScreen() {
@@ -57,9 +75,8 @@ export default function ExecScreen() {
   const annualRate = effectiveAnnualInterestRate(rank);
   const currencyOptions: DisplayCurrencyCode[] = ['USD', 'EUR', 'SEK'];
 
-  const cloudStatusLabel = cloudSyncStatusLabel(cloudSync.status, {
-    synced: t.exec.cloudSyncSynced,
-    pending: t.exec.cloudSyncPending,
+  const lastSyncStatusText = lastSyncStatusLabel(cloudSync.lastSyncStatus, {
+    success: t.exec.cloudSyncStatusSuccess,
     syncing: t.exec.cloudSyncSyncing,
     offline: t.exec.cloudSyncOffline,
     unavailable: t.exec.cloudSyncUnavailable,
@@ -67,16 +84,34 @@ export default function ExecScreen() {
     error: t.exec.cloudSyncError,
   });
 
+  const nextSyncPlannedText = formatNextSyncPlanned(cloudSync.nextSyncPlannedAtUnix, {
+    automatic: t.exec.cloudSyncNextSyncAutomatic,
+    soon: t.exec.cloudSyncNextSyncSoon,
+    whenOnline: t.exec.cloudSyncNextSyncWhenOnline,
+  });
+
   const statusStyle =
-    cloudSync.status === 'synced'
+    cloudSync.lastSyncStatus === 'success'
       ? styles.statusOk
-      : cloudSync.status === 'syncing'
+      : cloudSync.lastSyncStatus === 'syncing'
         ? styles.statusNeutral
-        : cloudSync.status === 'pending'
-          ? styles.statusWarn
-          : cloudSync.status === 'offline' || cloudSync.status === 'disabled'
-            ? styles.statusMuted
-            : styles.statusWarn;
+        : cloudSync.lastSyncStatus === 'offline' || cloudSync.lastSyncStatus === 'disabled'
+          ? styles.statusMuted
+          : styles.statusWarn;
+
+  const handleBorrow = (productId: string, amountMinor: number) => {
+    const result = borrowLoan(productId, amountMinor);
+    if (!result.success) {
+      Alert.alert(t.exec.loanBorrowFailedTitle, result.errorMessage);
+    }
+  };
+
+  const handleRepay = (loanId: string) => {
+    const result = repayLoanById(loanId);
+    if (!result.success) {
+      Alert.alert(t.exec.loanRepayFailedTitle, result.errorMessage);
+    }
+  };
 
   const confirmDeleteAccount = () => {
     if (!backendStatus.connected || deletingAccount) {
@@ -97,6 +132,9 @@ export default function ExecScreen() {
                 return;
               }
               Alert.alert(t.exec.deleteAccountFailedTitle, result.message);
+            })
+            .catch(() => {
+              Alert.alert(t.exec.deleteAccountFailedTitle, t.common.unexpectedError);
             })
             .finally(() => setDeletingAccount(false));
         },
@@ -137,33 +175,48 @@ export default function ExecScreen() {
 
       <SectionHeader title={t.exec.cloudSyncTitle} subtitle={t.exec.cloudSyncSubtitle} />
       <View style={styles.backendCard}>
-        <View style={styles.backendRow}>
-          <Text style={styles.settingLabel}>{t.exec.cloudSyncStatus}</Text>
-          <Text style={[styles.backendValue, statusStyle]}>{cloudStatusLabel}</Text>
-        </View>
-        {cloudSync.status !== 'disabled' && cloudSync.status !== 'unavailable' ? (
+        {cloudSync.lastSyncStatus !== 'disabled' && cloudSync.lastSyncStatus !== 'unavailable' ? (
+          <>
+            <View style={styles.backendRow}>
+              <Text style={styles.settingLabel}>{t.exec.cloudSyncLastSynced}</Text>
+              <Text style={styles.backendValue}>
+                {formatSyncTime(cloudSync.lastSyncAtUnix, t.common.never)}
+              </Text>
+            </View>
+            <View style={styles.backendRow}>
+              <Text style={styles.settingLabel}>{t.exec.cloudSyncLastSyncStatus}</Text>
+              <Text style={[styles.backendValue, statusStyle]}>{lastSyncStatusText}</Text>
+            </View>
+            <View style={styles.backendRow}>
+              <Text style={styles.settingLabel}>{t.exec.cloudSyncNextSyncPlanned}</Text>
+              <Text style={styles.backendValue}>
+                {cloudSync.lastSyncStatus === 'offline'
+                  ? t.exec.cloudSyncNextSyncWhenOnline
+                  : nextSyncPlannedText}
+              </Text>
+            </View>
+          </>
+        ) : (
           <View style={styles.backendRow}>
-            <Text style={styles.settingLabel}>{t.exec.cloudSyncLastSynced}</Text>
-            <Text style={styles.backendValue}>
-              {formatSyncTime(cloudSync.lastSyncAtUnix, t.common.never)}
-            </Text>
+            <Text style={styles.settingLabel}>{t.exec.cloudSyncLastSyncStatus}</Text>
+            <Text style={[styles.backendValue, statusStyle]}>{lastSyncStatusText}</Text>
           </View>
-        ) : null}
+        )}
         {cloudSync.statusMessage ? <Text style={styles.backendError}>{cloudSync.statusMessage}</Text> : null}
-        {cloudSync.status === 'offline' ? (
+        {cloudSync.lastSyncStatus === 'offline' ? (
           <Text style={styles.backendHint}>{t.exec.cloudSyncHintOffline}</Text>
         ) : null}
         {backendStatus.welcomeTitle ? <Text style={styles.welcomeBanner}>{backendStatus.welcomeTitle}</Text> : null}
         {cloudSync.canSyncNow ? (
           <PrimaryButton
-            label={busy || cloudSync.status === 'syncing' ? t.common.syncing : t.exec.cloudSyncSyncNow}
+            label={busy || cloudSync.lastSyncStatus === 'syncing' ? t.common.syncing : t.exec.cloudSyncSyncNow}
             onPress={() =>
               run(syncCloudNow, t.exec.cloudSyncSyncNow, {
                 complete: interpolate(t.common.actionComplete, { title: t.exec.cloudSyncSyncNow }),
                 failed: interpolate(t.common.actionFailed, { title: t.exec.cloudSyncSyncNow }),
               })
             }
-            disabled={busy || deletingAccount || cloudSync.status === 'syncing'}
+            disabled={busy || deletingAccount || cloudSync.lastSyncStatus === 'syncing'}
           />
         ) : null}
       </View>
@@ -188,7 +241,7 @@ export default function ExecScreen() {
                   })}
                 </Text>
               </View>
-              <Pressable onPress={() => repayLoanById(loan.id)} style={styles.repayButton}>
+              <Pressable onPress={() => handleRepay(loan.id)} style={styles.repayButton}>
                 <Text style={styles.repayLabel}>{t.common.repay}</Text>
               </Pressable>
             </View>
@@ -210,7 +263,7 @@ export default function ExecScreen() {
                 </Text>
                 <PrimaryButton
                   label={interpolate(t.exec.borrowAmount, { amount: formatMoneyCompact(terms.maxAmountMinor) })}
-                  onPress={() => borrowLoan(product.id, terms.maxAmountMinor)}
+                  onPress={() => handleBorrow(product.id, terms.maxAmountMinor)}
                 />
               </View>
             );

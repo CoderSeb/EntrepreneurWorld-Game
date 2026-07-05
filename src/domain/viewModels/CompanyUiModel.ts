@@ -33,7 +33,7 @@ import {
   getCompanyLifecyclePhase,
   CompanyLifecyclePhase,
 } from '@/domain/companies/CompanyLifecycleService';
-import { describeActivityEffect, describeActiveEffectLine } from '@/domain/companies/ActivityEffectService';
+import { describeActivityEffect } from '@/domain/companies/ActivityEffectService';
 import {
   EXECUTIVE_AUTOMATION_POLICIES,
   ExecutiveAutomationPolicy,
@@ -108,7 +108,6 @@ export type CompanyUiModel = {
   bottleneckHint: string | null;
   lifecyclePhase: CompanyLifecyclePhase;
   automationPolicy: ExecutiveAutomationPolicy;
-  activeEffectSummaries: string[];
   integrationDebtMinor: number;
   integrationComplete: boolean;
 };
@@ -265,7 +264,6 @@ export function buildCompanyUiModel(
     bottleneckHint: describeIndustryBottleneck(company, config),
     lifecyclePhase: getCompanyLifecyclePhase(company),
     automationPolicy: company.automationPolicy,
-    activeEffectSummaries: buildActiveEffectSummaries(company, config, nowUnix, translations),
     integrationDebtMinor: company.integrationDebtMinor,
     integrationComplete: company.integrationComplete,
   };
@@ -308,26 +306,6 @@ export type TaskUiModel = {
   cooldownRemaining: number;
   ready: boolean;
 };
-
-function buildActiveEffectSummaries(
-  company: CompanyState,
-  config: EconomyConfig,
-  nowUnix: number,
-  translations?: TranslationDictionary,
-): string[] {
-  const activities = getActivitiesForKind(config, company.companyKind);
-  return company.activeEffects
-    .filter((effect) => effect.expiresAtUnix > nowUnix)
-    .map((effect) => {
-      const activity = activities.find((entry) => entry.id === effect.activityId);
-      if (!activity) {
-        return effect.activityId;
-      }
-      const label = translations ? getActivityLabel(activity.id, translations) : activity.displayName;
-      const description = describeActiveEffectLine(effect);
-      return `${label}: ${description}`;
-    });
-}
 
 export { EXECUTIVE_AUTOMATION_POLICIES };
 export type { ExecutiveAutomationPolicy };

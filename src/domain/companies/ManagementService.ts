@@ -183,6 +183,3 @@ export function accrueLoanInterest(appState: AppState, deltaSeconds: number): vo
   }
 }
 
-/** @deprecated Use hireExecutiveRole */
-export const hireManager = hireExecutiveRole;
-

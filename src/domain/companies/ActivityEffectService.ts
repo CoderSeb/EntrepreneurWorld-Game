@@ -83,10 +83,6 @@ function formatMultiplierEffect(effectType: ActivityEffectType, multiplier: numb
   return null;
 }
 
-export function describeActiveEffectLine(effect: CompanyActiveEffect): string {
-  return formatMultiplierEffect(effect.effectType, effect.multiplier) ?? effect.effectType;
-}
-
 export function applyActivityEffect(
   company: CompanyState,
   activity: ActivityDefinition,

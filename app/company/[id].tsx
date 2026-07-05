@@ -17,7 +17,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 import { MAX_PAYROLL_LEVEL, MIN_PAYROLL_LEVEL } from '@/domain/companies/EmployeeService';
 import { EXECUTIVE_AUTOMATION_POLICIES } from '@/domain/viewModels/CompanyUiModel';
 import { getAutomationPolicyLabel } from '@/i18n/policyLabels';
-import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyService';
+import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyMultipliers';
 import { formatDurationSeconds } from '@/domain/time/DurationFormat';
 
 export default function CompanyDetailScreen() {
@@ -241,17 +241,6 @@ export default function CompanyDetailScreen() {
         netProfitMinorPerHour={company.economyNetMinorPerHour}
         formatMoney={formatMoneyCompact}
       />
-
-      <SectionHeader title={t.company.activeEffectsTitle} />
-      {company.activeEffectSummaries.length === 0 ? (
-        <Text style={styles.healthMeta}>{t.company.activeEffectsEmpty}</Text>
-      ) : (
-        company.activeEffectSummaries.map((summary) => (
-          <Text key={summary} style={styles.preview}>
-            {summary}
-          </Text>
-        ))
-      )}
 
       {company.hasTaskAutomation ? (
         <>

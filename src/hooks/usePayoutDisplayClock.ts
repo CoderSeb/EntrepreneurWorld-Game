@@ -60,11 +60,3 @@ export function useFrozenAccruingCashDisplay(
 
   return state.displayMinor;
 }
-
-export function useDisplayedAccruingCash(
-  actualCashMinor: number,
-  hourlyAccrualMinor: number,
-): number {
-  const nowMs = usePayoutDisplayClock();
-  return useFrozenAccruingCashDisplay(actualCashMinor, hourlyAccrualMinor, nowMs);
-}

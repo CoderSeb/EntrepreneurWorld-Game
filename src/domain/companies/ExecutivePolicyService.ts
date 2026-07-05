@@ -1,46 +1,24 @@
 import { ActivityDefinition, EconomyConfig } from '@/domain/config/EconomyConfig';
 import { MarketState } from '@/domain/core/AppState';
 import { CompanyState } from '@/domain/core/CompanyState';
-import { isExecutiveHired } from '@/domain/companies/ExecutiveContracts';
-import { getExpensesPerHour } from '@/domain/economy/EffectiveEconomyCalculator';
+import { employeePayrollPerHourMinor } from '@/domain/companies/EmployeeService';
+import {
+  ExecutiveAutomationPolicy,
+  EXECUTIVE_AUTOMATION_POLICIES,
+  hasActiveTaskAutomation,
+  normalizeAutomationPolicy,
+} from '@/domain/companies/ExecutivePolicyMultipliers';
 
-export type ExecutiveAutomationPolicy =
-  | 'balanced'
-  | 'aggressive_growth'
-  | 'cost_control'
-  | 'quality_first'
-  | 'cash_reserve';
+export type { ExecutiveAutomationPolicy };
+export {
+  EXECUTIVE_AUTOMATION_POLICIES,
+  getPolicyExpenseMultiplier,
+  getPolicyRevenueMultiplier,
+  hasActiveTaskAutomation,
+  normalizeAutomationPolicy,
+} from '@/domain/companies/ExecutivePolicyMultipliers';
 
-export const EXECUTIVE_AUTOMATION_POLICIES: ExecutiveAutomationPolicy[] = [
-  'balanced',
-  'aggressive_growth',
-  'cost_control',
-  'quality_first',
-  'cash_reserve',
-];
-
-const POLICY_REVENUE: Record<ExecutiveAutomationPolicy, number> = {
-  balanced: 1,
-  aggressive_growth: 1.03,
-  cost_control: 0.98,
-  quality_first: 0.99,
-  cash_reserve: 1,
-};
-
-const POLICY_EXPENSE: Record<ExecutiveAutomationPolicy, number> = {
-  balanced: 1,
-  aggressive_growth: 1.02,
-  cost_control: 0.96,
-  quality_first: 1.01,
-  cash_reserve: 0.97,
-};
-
-export function normalizeAutomationPolicy(value: string | undefined): ExecutiveAutomationPolicy {
-  if (value && EXECUTIVE_AUTOMATION_POLICIES.includes(value as ExecutiveAutomationPolicy)) {
-    return value as ExecutiveAutomationPolicy;
-  }
-  return 'balanced';
-}
+const CASH_RESERVE_RUNWAY_HOURS = 24;
 
 export function setCompanyAutomationPolicy(
   company: CompanyState,
@@ -56,49 +34,26 @@ export function hasTaskAutomationActive(
   config: EconomyConfig,
   atUnix: number,
 ): boolean {
-  return config.managers.some(
-    (role) =>
-      role.automatesTasks &&
-      role.appliesTo === company.companyKind &&
-      isExecutiveHired(company, role.id, atUnix),
+  return hasActiveTaskAutomation(company, config, atUnix);
+}
+
+export function estimateCashReserveThresholdMinor(
+  company: CompanyState,
+  config: EconomyConfig,
+): number {
+  const payrollPerHour = employeePayrollPerHourMinor(company.employeeCount, company.payrollLevel);
+  const conservativeHourlyBurn = company.expensesPerHour.amountMinorUnits + payrollPerHour;
+  return Math.max(
+    config.lowCashThresholdMinor,
+    conservativeHourlyBurn * CASH_RESERVE_RUNWAY_HOURS,
   );
-}
-
-export function hasActiveTaskAutomation(
-  company: CompanyState,
-  config: EconomyConfig,
-  nowUnix: number,
-): boolean {
-  return hasTaskAutomationActive(company, config, nowUnix);
-}
-
-export function getPolicyRevenueMultiplier(
-  company: CompanyState,
-  config: EconomyConfig,
-  nowUnix: number,
-): number {
-  if (!hasActiveTaskAutomation(company, config, nowUnix)) {
-    return 1;
-  }
-  return POLICY_REVENUE[normalizeAutomationPolicy(company.automationPolicy)];
-}
-
-export function getPolicyExpenseMultiplier(
-  company: CompanyState,
-  config: EconomyConfig,
-  nowUnix: number,
-): number {
-  if (!hasActiveTaskAutomation(company, config, nowUnix)) {
-    return 1;
-  }
-  return POLICY_EXPENSE[normalizeAutomationPolicy(company.automationPolicy)];
 }
 
 export function shouldAutomateActivity(
   company: CompanyState,
   activity: ActivityDefinition,
   config: EconomyConfig,
-  marketState: MarketState,
+  _marketState: MarketState,
   nowUnix: number,
 ): boolean {
   const policy = normalizeAutomationPolicy(company.automationPolicy);
@@ -107,9 +62,7 @@ export function shouldAutomateActivity(
   }
 
   if (policy === 'cash_reserve') {
-    const runwayHours = 24;
-    const hourlyBurn = getExpensesPerHour(company, config, marketState, nowUnix).amountMinorUnits;
-    const minimumCash = Math.max(config.lowCashThresholdMinor, hourlyBurn * runwayHours);
+    const minimumCash = estimateCashReserveThresholdMinor(company, config);
     if (company.cashBalance.amountMinorUnits < minimumCash) {
       return false;
     }

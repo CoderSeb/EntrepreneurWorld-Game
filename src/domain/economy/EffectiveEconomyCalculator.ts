@@ -30,7 +30,7 @@ import {
 import {
   getPolicyExpenseMultiplier,
   getPolicyRevenueMultiplier,
-} from '@/domain/companies/ExecutivePolicyService';
+} from '@/domain/companies/ExecutivePolicyMultipliers';
 import { getIntegrationDebtExpensePerHourMinor } from '@/domain/companies/AcquisitionService';
 import {
   getExpenseMultiplier as getTrackExpenseMultiplier,
@@ -155,7 +155,7 @@ function executiveSalaries(
   return MoneyValue.fromMinor(total);
 }
 
-const PREFERRED_TRACK_REVENUE_BONUS = 1.08;
+export const PREFERRED_TRACK_REVENUE_BONUS = 1.08;
 
 export function getPortfolioRevenueMultiplier(
   company: CompanyState,

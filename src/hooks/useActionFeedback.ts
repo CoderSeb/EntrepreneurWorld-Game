@@ -25,6 +25,8 @@ export function useActionFeedback() {
         const successTitle = labels?.complete ?? `${title} complete`;
         const failureTitle = labels?.failed ?? `${title} failed`;
         Alert.alert(result.success ? successTitle : failureTitle, result.message);
+      } catch {
+        Alert.alert(labels?.failed ?? `${title} failed`, 'Something went wrong. Please try again.');
       } finally {
         setBusy(false);
       }

@@ -20,7 +20,7 @@ import {
 import {
   getPolicyExpenseMultiplier,
   getPolicyRevenueMultiplier,
-} from '@/domain/companies/ExecutivePolicyService';
+} from '@/domain/companies/ExecutivePolicyMultipliers';
 import { getIntegrationDebtExpensePerHourMinor } from '@/domain/companies/AcquisitionService';
 import { getExecutiveSalaryMinor, isExecutiveHired } from '@/domain/companies/ExecutiveContracts';
 import { getTrackLevel } from '@/domain/companies/UpgradeTrackService';
@@ -33,8 +33,12 @@ import {
   getExpenseMultiplier,
   getRevenueMultiplier,
 } from '@/domain/economy/MarketModifierCalculator';
-import { getPortfolioRevenueMultiplier } from '@/domain/economy/EffectiveEconomyCalculator';
-import { getRevenuePerHour, getExpensesPerHour } from '@/domain/economy/EffectiveEconomyCalculator';
+import {
+  getPortfolioRevenueMultiplier,
+  getRevenuePerHour,
+  getExpensesPerHour,
+  PREFERRED_TRACK_REVENUE_BONUS,
+} from '@/domain/economy/EffectiveEconomyCalculator';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 
 export type EconomyBreakdownLine = {
@@ -55,8 +59,6 @@ export type CompanyEconomyBreakdown = {
   totalExpensesMinorPerHour: number;
   netMinorPerHour: number;
 };
-
-const PREFERRED_TRACK_REVENUE_BONUS = 1.08;
 
 export function buildCompanyEconomyBreakdown(
   company: CompanyState,
