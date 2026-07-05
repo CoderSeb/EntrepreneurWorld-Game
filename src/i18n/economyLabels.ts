@@ -1,4 +1,5 @@
 import type { TranslationDictionary } from '@/i18n/types';
+import type { RealisticBreakdownCategoryId } from '@/domain/economy/EconomyBreakdownPresenter';
 
 const BREAKDOWN_LABELS: Record<string, keyof TranslationDictionary['economyBreakdown']> = {
   base_revenue: 'baseRevenue',
@@ -25,6 +26,37 @@ const BREAKDOWN_LABELS: Record<string, keyof TranslationDictionary['economyBreak
   leverage_interest: 'leverageInterest',
   integration_debt: 'integrationDebt',
 };
+
+const REALISTIC_BREAKDOWN_LABELS: Record<
+  RealisticBreakdownCategoryId,
+  keyof TranslationDictionary['economyBreakdown']
+> = {
+  operating_sales: 'operatingSales',
+  growth_investments: 'growthInvestments',
+  leadership_impact: 'leadershipImpact',
+  market_and_synergy: 'marketAndSynergy',
+  campaigns_revenue: 'campaignsRevenue',
+  industry_adjustments: 'industryAdjustments',
+  operating_overhead: 'operatingOverhead',
+  staff_salaries: 'staffSalaries',
+  executive_compensation: 'executiveCompensation',
+  management_overhead: 'managementOverhead',
+  management_savings: 'managementSavings',
+  market_conditions: 'marketConditions',
+  campaign_costs: 'campaignCosts',
+  financing_costs: 'financingCosts',
+};
+
+export function getRealisticEconomyBreakdownLabel(
+  categoryId: string,
+  translations: TranslationDictionary,
+): string {
+  const mapped = REALISTIC_BREAKDOWN_LABELS[categoryId as RealisticBreakdownCategoryId];
+  if (mapped) {
+    return translations.economyBreakdown[mapped];
+  }
+  return categoryId.replace(/_/g, ' ');
+}
 
 export function getEconomyBreakdownLabel(
   lineId: string,

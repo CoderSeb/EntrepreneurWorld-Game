@@ -3,26 +3,31 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useGame } from '@/context/GameContext';
 import { useTranslation } from '@/i18n';
 import { interpolate } from '@/i18n';
+import {
+  netMinorPerPayoutCycle,
+  PAYOUT_DISPLAY_INTERVAL_SECONDS,
+  payoutCycleProgress,
+} from '@/domain/economy/PayoutDisplay';
+import { useFrozenAccruingCashDisplay, usePayoutDisplayClock } from '@/hooks/usePayoutDisplayClock';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
-const TICK_MS = 1000;
-
 export function CashHeaderBar() {
-  const { dashboard, formatMoneyCompact, lastSimTickMs, backendStatus } = useGame();
+  const { dashboard, formatMoney, backendStatus } = useGame();
   const { t } = useTranslation();
-  const [tickProgress, setTickProgress] = useState(0);
+  const nowMs = usePayoutDisplayClock();
 
   const hourlyNetMinor = dashboard.hourlyNet.amountMinorUnits;
-  const secondsToNext = Math.max(0, Math.ceil((1 - tickProgress) * TICK_MS / 1000));
+  const payoutPerCycleMinor = netMinorPerPayoutCycle(hourlyNetMinor);
+  const hasPayoutPreview = hourlyNetMinor !== 0;
+  const cycleState = payoutCycleProgress(nowMs);
+  const displayedTreasuryMinor = useFrozenAccruingCashDisplay(
+    dashboard.conglomerateLiquidCash.amountMinorUnits,
+    hourlyNetMinor,
+    nowMs,
+  );
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const elapsed = Date.now() - lastSimTickMs;
-      setTickProgress(Math.min(1, elapsed / TICK_MS));
-    }, 100);
-    return () => clearInterval(interval);
-  }, [lastSimTickMs]);
+  const payoutPositive = payoutPerCycleMinor >= 0;
 
   return (
     <View style={styles.root}>
@@ -30,23 +35,35 @@ export function CashHeaderBar() {
         {backendStatus.enabled && !backendStatus.connected ? (
           <Text style={styles.offline}>{t.header.backendOffline}</Text>
         ) : null}
-        <Text style={styles.tickLabel}>{t.header.nextPayout}</Text>
+        <View style={styles.payoutHeaderRow}>
+          <Text style={styles.tickLabel}>{t.header.nextPayout}</Text>
+          <Text style={styles.intervalMeta}>
+            {interpolate(t.header.payoutInterval, { seconds: PAYOUT_DISPLAY_INTERVAL_SECONDS })}
+          </Text>
+        </View>
+        {hasPayoutPreview ? (
+          <Text style={[styles.payoutAmount, payoutPositive ? styles.positive : styles.negative]}>
+            {interpolate(t.header.nextPayoutAmount, {
+              amount: `${payoutPositive ? '+' : ''}${formatMoney(payoutPerCycleMinor)}`,
+            })}
+          </Text>
+        ) : null}
         <View style={styles.tickTrack}>
-          <View style={[styles.tickFill, { width: `${Math.round(tickProgress * 100)}%` }]} />
+          <View style={[styles.tickFill, { width: `${Math.round(cycleState.progress * 100)}%` }]} />
         </View>
         <Text style={styles.tickMeta}>
-          {interpolate(t.header.nextPayoutMeta, { seconds: secondsToNext })}
+          {interpolate(t.header.nextPayoutCountdown, { seconds: cycleState.secondsRemaining })}
         </Text>
       </View>
       <View style={styles.right}>
         <Text style={styles.cashLabel}>{t.common.treasury}</Text>
-        <Text style={styles.cashValue}>
-          {formatMoneyCompact(dashboard.conglomerateLiquidCash.amountMinorUnits)}
+        <Text style={styles.cashValue} numberOfLines={1} adjustsFontSizeToFit>
+          {formatMoney(displayedTreasuryMinor)}
         </Text>
-        {hourlyNetMinor !== 0 ? (
-          <Text style={[styles.flowMeta, hourlyNetMinor > 0 ? styles.positive : styles.negative]}>
+        {hasPayoutPreview ? (
+          <Text style={[styles.flowMeta, payoutPositive ? styles.positive : styles.negative]}>
             {hourlyNetMinor > 0 ? '+' : ''}
-            {formatMoneyCompact(hourlyNetMinor)}
+            {formatMoney(hourlyNetMinor)}
             {t.header.perHour}
           </Text>
         ) : null}
@@ -70,6 +87,12 @@ const styles = StyleSheet.create({
   },
   left: { flex: 1, gap: 4 },
   right: { alignItems: 'flex-end', gap: 2 },
+  payoutHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    justifyContent: 'space-between',
+    gap: spacing.sm,
+  },
   cashLabel: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.muted, letterSpacing: 1 },
   cashValue: { fontFamily: fonts.display, fontSize: fontSizes.xl, color: colors.primary, fontWeight: '900' },
   flowMeta: { fontFamily: fonts.mono, fontSize: fontSizes.micro },
@@ -77,6 +100,12 @@ const styles = StyleSheet.create({
   negative: { color: colors.danger },
   offline: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.warning },
   tickLabel: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.muted, letterSpacing: 0.5 },
+  intervalMeta: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.muted },
+  payoutAmount: {
+    fontFamily: fonts.display,
+    fontSize: fontSizes.md,
+    fontWeight: '800',
+  },
   tickTrack: {
     width: '100%',
     height: 4,

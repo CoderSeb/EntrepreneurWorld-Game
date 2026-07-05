@@ -11,6 +11,7 @@ import { HealthBar } from '@/components/HealthBar';
 import { SectionHeader } from '@/components/SectionHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { ExecutiveRoleCard } from '@/components/ExecutiveRoleCard';
+import { EconomyBreakdownPanel } from '@/components/EconomyBreakdownPanel';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { MAX_PAYROLL_LEVEL, MIN_PAYROLL_LEVEL } from '@/domain/companies/EmployeeService';
@@ -231,13 +232,14 @@ export default function CompanyDetailScreen() {
         title={t.company.economyBreakdownTitle}
         subtitle={t.company.economyBreakdownSubtitle}
       />
-      {company.economyBreakdown.slice(0, 8).map((line) => (
-        <Text key={line.id} style={styles.healthMeta}>
-          {line.label}: {formatMoneyCompact(Math.abs(line.amountMinorPerHour))}
-          {t.common.perHour}
-          {line.amountMinorPerHour < 0 ? ' (−)' : line.kind === 'expense' ? '' : ''}
-        </Text>
-      ))}
+      <EconomyBreakdownPanel
+        revenueLines={company.economyRevenueBreakdown}
+        expenseLines={company.economyExpenseBreakdown}
+        grossRevenueMinorPerHour={company.economyGrossRevenueMinorPerHour}
+        totalExpensesMinorPerHour={company.economyTotalExpensesMinorPerHour}
+        netProfitMinorPerHour={company.economyNetMinorPerHour}
+        formatMoney={formatMoneyCompact}
+      />
 
       <SectionHeader title={t.company.activeEffectsTitle} />
       {company.activeEffectSummaries.length === 0 ? (

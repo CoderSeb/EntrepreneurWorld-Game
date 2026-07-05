@@ -38,7 +38,8 @@ import {
   buildCompanyEconomyBreakdown,
   EconomyBreakdownLineUi,
 } from '@/domain/economy/EconomyBreakdownService';
-import { getEconomyBreakdownLabel } from '@/i18n/economyLabels';
+import { presentRealisticEconomyBreakdown } from '@/domain/economy/EconomyBreakdownPresenter';
+import { getEconomyBreakdownLabel, getRealisticEconomyBreakdownLabel } from '@/i18n/economyLabels';
 import {
   getMaxSystemsLevel,
   getNextSystemsUpgradeCostMinor,
@@ -88,6 +89,11 @@ export type CompanyUiModel = {
   payrollLevel: number;
   marginalEmployeeProfitMinor: number;
   economyBreakdown: EconomyBreakdownLineUi[];
+  economyRevenueBreakdown: EconomyBreakdownLineUi[];
+  economyExpenseBreakdown: EconomyBreakdownLineUi[];
+  economyGrossRevenueMinorPerHour: number;
+  economyTotalExpensesMinorPerHour: number;
+  economyNetMinorPerHour: number;
   bottleneckHint: string | null;
   lifecyclePhase: CompanyLifecyclePhase;
   automationPolicy: ExecutiveAutomationPolicy;
@@ -162,6 +168,17 @@ export function buildCompanyUiModel(
     nowUnix,
   );
 
+  const labeledBreakdown = economyBreakdown.lines.map((line) => ({
+    ...line,
+    label: translations ? getEconomyBreakdownLabel(line.id, translations) : line.id,
+  }));
+
+  const presentedBreakdown = presentRealisticEconomyBreakdown(
+    economyBreakdown,
+    (categoryId) =>
+      translations ? getRealisticEconomyBreakdownLabel(categoryId, translations) : categoryId,
+  );
+
   return {
     id: company.id,
     name: company.name,
@@ -205,10 +222,12 @@ export function buildCompanyUiModel(
       company.payrollLevel,
       company.level,
     ),
-    economyBreakdown: economyBreakdown.lines.map((line) => ({
-      ...line,
-      label: translations ? getEconomyBreakdownLabel(line.id, translations) : line.id,
-    })),
+    economyBreakdown: labeledBreakdown,
+    economyRevenueBreakdown: presentedBreakdown.revenueLines,
+    economyExpenseBreakdown: presentedBreakdown.expenseLines,
+    economyGrossRevenueMinorPerHour: presentedBreakdown.grossRevenueMinorPerHour,
+    economyTotalExpensesMinorPerHour: presentedBreakdown.totalExpensesMinorPerHour,
+    economyNetMinorPerHour: presentedBreakdown.netMinorPerHour,
     bottleneckHint: describeIndustryBottleneck(company, config),
     lifecyclePhase: getCompanyLifecyclePhase(company),
     automationPolicy: company.automationPolicy,

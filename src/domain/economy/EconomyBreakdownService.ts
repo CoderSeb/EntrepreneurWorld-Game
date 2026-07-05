@@ -45,6 +45,8 @@ export type EconomyBreakdownLine = {
 
 export type EconomyBreakdownLineUi = EconomyBreakdownLine & {
   label: string;
+  /** Expense credits (e.g. management savings) reduce the expense total but show in the expense section. */
+  isCredit?: boolean;
 };
 
 export type CompanyEconomyBreakdown = {

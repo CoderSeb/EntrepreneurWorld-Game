@@ -65,8 +65,8 @@ export function FoundCompanyForm() {
   const trimmedName = companyName.trim();
   const hasValidName = trimmedName.length >= 2;
   const canSubmit = Boolean(industryId) && hasValidName && canAfford;
-  const remainingAfterFounding = foundingFunding.totalMinor - foundingCost;
   const shortfallMinor = Math.max(0, foundingCost - foundingFunding.totalMinor);
+  const remainingAfterFounding = foundingFunding.totalMinor - foundingCost;
 
   const selectedPresentation = selectedIndustry ? resolveIndustryPresentation(selectedIndustry) : null;
 
