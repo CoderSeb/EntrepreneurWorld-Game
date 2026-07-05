@@ -23,7 +23,7 @@ function formatBoardValue(
     case 'subsidiaries':
       return String(entry.subsidiaryCount);
     default:
-      return formatMoneyCompact(entry.netWorthMinor);
+      return formatMoneyCompact(entry.scoreMinor);
   }
 }
 

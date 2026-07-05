@@ -1,6 +1,7 @@
 import { ApiClient, ApiResult } from '@/services/api/ApiClient';
 import { LeaderboardBoard, LeaderboardResponse } from '@/services/api/types';
 import { getApiBaseUrl } from '@/config/backendConfig';
+import { normalizeLeaderboardResponse } from '@/services/backend/leaderboardMapper';
 
 export async function fetchLeaderboard(
   board: LeaderboardBoard,
@@ -17,8 +18,18 @@ export async function fetchLeaderboard(
   }
 
   const api = new ApiClient(baseUrl);
-  return api.get<LeaderboardResponse>(
+  const result = await api.get<Record<string, unknown>>(
     `/api/v1/leaderboards/${board}?limit=${limit}`,
     accessToken,
   );
+
+  if (!result.success) {
+    return result;
+  }
+
+  return {
+    success: true,
+    status: result.status,
+    data: normalizeLeaderboardResponse(result.data),
+  };
 }

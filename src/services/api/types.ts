@@ -69,7 +69,10 @@ export type LeaderboardEntryDto = {
   rank: number;
   playerId: string;
   displayName: string;
-  netWorthMinor: number;
+  scoreMinor: number;
+  conglomerateNetWorthMinor: number;
+  personalNetWorthMinor: number;
+  hourlyEarningsMinor: number;
   businessRank: number;
   subsidiaryCount: number;
   isCurrentPlayer: boolean;
