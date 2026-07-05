@@ -128,6 +128,12 @@ export const sv: TranslationDictionary = {
       ai_boom: 'AI-boom',
       real_estate_boom: 'Fastighetsboom',
     },
+    marketSignals: {
+      energy_warning: 'Energipriser stiger',
+      viral_rumor: 'Viraltrend byggs upp',
+      tech_hype: 'AI-investeringar ryktas öka',
+      staff_pressure: 'Arbetsmarknaden stramnar',
+    },
     loans: {
       starter_loan: 'Startlån',
       growth_loan: 'Tillväxtlån',

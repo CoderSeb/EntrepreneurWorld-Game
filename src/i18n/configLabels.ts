@@ -29,6 +29,11 @@ export function getMarketEventLabel(eventId: string, t: TranslationDictionary): 
   return events[eventId] ?? fallbackLabel(eventId);
 }
 
+export function getMarketSignalLabel(signalId: string, t: TranslationDictionary): string {
+  const signals = t.configLabels.marketSignals as Record<string, string>;
+  return signals[signalId] ?? fallbackLabel(signalId);
+}
+
 export function getLoanProductLabel(productId: string, t: TranslationDictionary): string {
   const loans = t.configLabels.loans as Record<string, string>;
   return loans[productId] ?? fallbackLabel(productId);

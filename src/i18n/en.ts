@@ -126,6 +126,12 @@ export const en = {
       ai_boom: 'AI boom',
       real_estate_boom: 'Real estate boom',
     },
+    marketSignals: {
+      energy_warning: 'Energy prices rising',
+      viral_rumor: 'Viral trend building',
+      tech_hype: 'AI investment surge rumored',
+      staff_pressure: 'Labor market tightening',
+    },
     loans: {
       starter_loan: 'Starter loan',
       growth_loan: 'Growth loan',
