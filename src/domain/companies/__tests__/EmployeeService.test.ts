@@ -20,6 +20,7 @@ function makeSubsidiary(level = 1, employeeCount = 1, payrollLevel = 1) {
     reputation: 0,
     automationLevel: 0,
     executiveContracts: {},
+    activeEffects: [],
     lifetimeProfitMinor: 0,
     employeeCount,
     payrollLevel,

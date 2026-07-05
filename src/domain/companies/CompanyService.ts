@@ -1,13 +1,14 @@
 import {
+  ActivityDefinition,
   EconomyConfig,
   getIndustry,
   getIndustryFoundingCost,
   getMaxCompaniesForLevel,
-  ActivityDefinition,
 } from '@/domain/config/EconomyConfig';
 import { AppState, findCompany, getSubsidiaries } from '@/domain/core/AppState';
 import { CompanyState } from '@/domain/core/CompanyState';
 import { fail, ok, OperationResult } from '@/domain/core/OperationResult';
+import { applyActivityEffect } from '@/domain/companies/ActivityEffectService';
 import { hasHolding } from '@/domain/core/PlayerState';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { createHolding, createSubsidiary } from '@/domain/companies/CompanyFactory';
@@ -155,10 +156,17 @@ export function performActivity(
     return fail('activity_on_cooldown', `Activity available in ${remaining} seconds`);
   }
 
-  const reward = MoneyValue.fromMinor(activity.rewardMinor);
-  company.cashBalance = company.cashBalance.add(reward);
+  const result = applyActivityEffect(company, activity, nowUnix);
+  if (!result.success) {
+    return fail('activity_failed', 'Activity could not be applied');
+  }
+  if (result.failed) {
+    appState.activityCooldowns[cooldownKey] = nowUnix + activity.cooldownSeconds;
+    return fail('activity_failed', 'The strategic action did not succeed');
+  }
+
   appState.activityCooldowns[cooldownKey] = nowUnix + activity.cooldownSeconds;
-  return ok(reward);
+  return ok(MoneyValue.fromMinor(result.instantCashMinor));
 }
 
 export function getActivityCooldownRemaining(

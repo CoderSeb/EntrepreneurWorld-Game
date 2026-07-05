@@ -1,5 +1,5 @@
 {
-  "version": 7,
+  "version": 8,
   "starting_cash_minor": 5000000,
   "holding_company_cost_minor": 2500000,
   "subsidiary_company_cost_minor": 2500000,
@@ -82,22 +82,31 @@
     {
       "id": "serve_customers",
       "display_name": "Serve customers",
-      "reward_minor": 300,
-      "cooldown_seconds": 8,
+      "effect_type": "temporary_revenue_multiplier",
+      "effect_multiplier": 1.08,
+      "duration_seconds": 1800,
+      "reward_minor": 0,
+      "cooldown_seconds": 600,
       "applies_to": "subsidiary"
     },
     {
       "id": "optimize_workflow",
       "display_name": "Optimize workflow",
-      "reward_minor": 500,
-      "cooldown_seconds": 15,
+      "effect_type": "temporary_expense_multiplier",
+      "effect_multiplier": 0.9,
+      "duration_seconds": 3600,
+      "reward_minor": 0,
+      "cooldown_seconds": 5400,
       "applies_to": "subsidiary"
     },
     {
       "id": "launch_campaign",
       "display_name": "Launch campaign",
-      "reward_minor": 800,
-      "cooldown_seconds": 30,
+      "effect_type": "temporary_revenue_multiplier",
+      "effect_multiplier": 1.15,
+      "duration_seconds": 7200,
+      "reward_minor": 0,
+      "cooldown_seconds": 21600,
       "applies_to": "subsidiary"
     }
   ],
@@ -296,7 +305,11 @@
       "base_expenses_per_hour_minor": 70000,
       "risk_profile": 0.2,
       "automation_potential": 0.5,
-      "min_business_rank": 1
+      "min_business_rank": 1,
+      "industry_mechanics": {
+        "primary_bottleneck": "capacity",
+        "capacity_per_employee_minor": 65000
+      }
     },
     {
       "id": "cleaning",
@@ -356,7 +369,12 @@
       "base_expenses_per_hour_minor": 80000,
       "risk_profile": 0.4,
       "automation_potential": 0.8,
-      "min_business_rank": 10
+      "min_business_rank": 10,
+      "industry_mechanics": {
+        "primary_bottleneck": "retention",
+        "base_churn_rate": 0.08,
+        "retention_bonus_per_quality_level": 0.02
+      }
     },
     {
       "id": "real_estate",

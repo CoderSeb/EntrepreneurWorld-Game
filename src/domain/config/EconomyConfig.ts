@@ -9,12 +9,29 @@ export type CompanyLimitRule = {
   maxCompanies: number;
 };
 
+export type ActivityEffectType =
+  | 'temporary_revenue_multiplier'
+  | 'temporary_expense_multiplier'
+  | 'cash_reward';
+
 export type ActivityDefinition = {
   id: string;
   displayName: string;
+  effectType: ActivityEffectType;
+  effectMultiplier: number;
+  durationSeconds: number;
   rewardMinor: number;
   cooldownSeconds: number;
   appliesTo: string;
+  failureChance: number;
+  failureReputationLoss: number;
+};
+
+export type IndustryMechanicsDefinition = {
+  primaryBottleneck: 'capacity' | 'retention' | 'none';
+  capacityPerEmployeeMinor?: number;
+  baseChurnRate?: number;
+  retentionBonusPerQualityLevel?: number;
 };
 
 export type ManagerDefinition = {
@@ -93,6 +110,7 @@ export type IndustryDefinition = {
   focusHint: string;
   accentColor: string;
   preferredTrackId: string | null;
+  mechanics?: IndustryMechanicsDefinition;
 };
 
 export type TreasuryConfig = {
@@ -181,9 +199,14 @@ type RawConfig = {
   activities?: Array<{
     id: string;
     display_name: string;
-    reward_minor: number;
+    effect_type?: string;
+    effect_multiplier?: number;
+    duration_seconds?: number;
+    reward_minor?: number;
     cooldown_seconds: number;
     applies_to: string;
+    failure_chance?: number;
+    failure_reputation_loss?: number;
   }>;
   managers?: Array<{
     id: string;
@@ -254,6 +277,12 @@ type RawConfig = {
     focus_hint?: string;
     accent_color?: string;
     preferred_track_id?: string;
+    industry_mechanics?: {
+      primary_bottleneck?: string;
+      capacity_per_employee_minor?: number;
+      base_churn_rate?: number;
+      retention_bonus_per_quality_level?: number;
+    };
   }>;
   treasury?: {
     salary_tax_rate?: number;
@@ -279,6 +308,7 @@ export function parseEconomyConfig(data: RawConfig): EconomyConfig {
       focusHint: industry.focus_hint ?? '',
       accentColor: industry.accent_color ?? '',
       preferredTrackId: industry.preferred_track_id ?? null,
+      mechanics: parseIndustryMechanics(industry.industry_mechanics),
     };
   }
 
@@ -307,9 +337,14 @@ export function parseEconomyConfig(data: RawConfig): EconomyConfig {
     activities: (data.activities ?? []).map((a) => ({
       id: a.id,
       displayName: a.display_name,
-      rewardMinor: a.reward_minor,
+      effectType: parseActivityEffectType(a.effect_type, a.reward_minor),
+      effectMultiplier: a.effect_multiplier ?? 1,
+      durationSeconds: a.duration_seconds ?? 0,
+      rewardMinor: a.reward_minor ?? 0,
       cooldownSeconds: a.cooldown_seconds,
       appliesTo: a.applies_to,
+      failureChance: a.failure_chance ?? 0,
+      failureReputationLoss: a.failure_reputation_loss ?? 0,
     })),
     managers: (data.managers ?? []).map((m) => ({
       id: m.id,
@@ -367,5 +402,44 @@ export function parseEconomyConfig(data: RawConfig): EconomyConfig {
       industryId: t.industry_id,
     })),
     industries,
+  };
+}
+
+function parseActivityEffectType(
+  rawType: string | undefined,
+  rewardMinor: number | undefined,
+): ActivityEffectType {
+  if (
+    rawType === 'temporary_revenue_multiplier'
+    || rawType === 'temporary_expense_multiplier'
+    || rawType === 'cash_reward'
+  ) {
+    return rawType;
+  }
+  return (rewardMinor ?? 0) > 0 ? 'cash_reward' : 'temporary_revenue_multiplier';
+}
+
+function parseIndustryMechanics(
+  raw?: {
+    primary_bottleneck?: string;
+    capacity_per_employee_minor?: number;
+    base_churn_rate?: number;
+    retention_bonus_per_quality_level?: number;
+  },
+): IndustryMechanicsDefinition | undefined {
+  if (!raw) {
+    return undefined;
+  }
+
+  const bottleneck = raw.primary_bottleneck ?? 'none';
+  if (bottleneck === 'none') {
+    return undefined;
+  }
+
+  return {
+    primaryBottleneck: bottleneck === 'retention' ? 'retention' : 'capacity',
+    capacityPerEmployeeMinor: raw.capacity_per_employee_minor,
+    baseChurnRate: raw.base_churn_rate,
+    retentionBonusPerQualityLevel: raw.retention_bonus_per_quality_level,
   };
 }

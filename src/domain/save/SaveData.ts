@@ -1,7 +1,7 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 
-export const CURRENT_SCHEMA_VERSION = 8;
+export const CURRENT_SCHEMA_VERSION = 9;
 
 export type SaveData = {
   schemaVersion: number;
@@ -206,6 +206,19 @@ export function migrateSavePayload(rawPayload: Record<string, unknown>): Record<
         state.companies = companies;
         migrated.state = state;
         version = 8;
+        break;
+      }
+      case 8: {
+        const state = (migrated.state as Record<string, unknown>) ?? {};
+        const companies = (state.companies as Record<string, unknown>[]) ?? [];
+        for (const company of companies) {
+          if (!company.active_effects) {
+            company.active_effects = [];
+          }
+        }
+        state.companies = companies;
+        migrated.state = state;
+        version = 9;
         break;
       }
       default:

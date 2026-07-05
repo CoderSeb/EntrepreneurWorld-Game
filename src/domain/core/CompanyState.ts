@@ -1,5 +1,6 @@
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { CompanyKind, CompanyKinds } from '@/domain/core/CompanyKinds';
+import { CompanyActiveEffect } from '@/domain/companies/ActivityEffectService';
 import { ExecutiveContract } from '@/domain/companies/ExecutiveContracts';
 
 export type CompanyState = {
@@ -12,6 +13,7 @@ export type CompanyState = {
   reputation: number;
   automationLevel: number;
   executiveContracts: Record<string, ExecutiveContract>;
+  activeEffects: CompanyActiveEffect[];
   lifetimeProfitMinor: number;
   employeeCount: number;
   payrollLevel: number;
@@ -46,6 +48,7 @@ export function duplicateCompanyState(company: CompanyState): CompanyState {
     reputation: company.reputation,
     automationLevel: company.automationLevel,
     executiveContracts: { ...company.executiveContracts },
+    activeEffects: company.activeEffects.map((effect) => ({ ...effect })),
     lifetimeProfitMinor: company.lifetimeProfitMinor,
     employeeCount: company.employeeCount,
     payrollLevel: company.payrollLevel,

@@ -24,6 +24,7 @@ function makeCompany(industryId: string, automationLevel = 0): CompanyState {
     reputation: 0,
     automationLevel,
     executiveContracts: {},
+    activeEffects: [],
     lifetimeProfitMinor: 0,
     employeeCount: 0,
     payrollLevel: 1,

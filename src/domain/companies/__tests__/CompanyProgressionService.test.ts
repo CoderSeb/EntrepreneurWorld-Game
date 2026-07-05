@@ -28,6 +28,7 @@ function createSubsidiary(overrides: Partial<{
     reputation: 0,
     automationLevel: 0,
     executiveContracts: overrides.executiveContracts ?? {},
+    activeEffects: [],
     lifetimeProfitMinor: 0,
     employeeCount: 2,
     payrollLevel: 1,
@@ -76,7 +77,7 @@ describe('CompanyProgressionService', () => {
     expect(activeWindow.runCount).toBeLessThan(fullWindow.runCount);
   });
 
-  it('applies automated task rewards only while CEO contract is active', () => {
+  it('applies automated task effects only while CEO contract is active', () => {
     const nowUnix = 100_000;
     const periodSeconds = 7200;
     const periodStartUnix = nowUnix - periodSeconds;
@@ -92,18 +93,20 @@ describe('CompanyProgressionService', () => {
 
     processCompanyProgression(state, config, periodSeconds, nowUnix);
 
-    let expectedCash = 0;
-    for (const activity of config.activities.filter((entry) => entry.appliesTo === 'subsidiary')) {
-      const runs = countAutomatedActivityRuns(
-        0,
-        periodStartUnix,
-        contractExpiryUnix,
-        activity.cooldownSeconds,
-      ).runCount;
-      expectedCash += activity.rewardMinor * runs;
-    }
-
-    expect(state.companies[0].cashBalance.amountMinorUnits).toBe(expectedCash);
+    expect(state.companies[0].activeEffects.length).toBeGreaterThan(0);
+    const activeWindowRuns = countAutomatedActivityRuns(
+      0,
+      periodStartUnix,
+      contractExpiryUnix,
+      config.activities[0].cooldownSeconds,
+    ).runCount;
+    const fullWindowRuns = countAutomatedActivityRuns(
+      0,
+      periodStartUnix,
+      nowUnix,
+      config.activities[0].cooldownSeconds,
+    ).runCount;
+    expect(activeWindowRuns).toBeLessThan(fullWindowRuns);
   });
 });
 

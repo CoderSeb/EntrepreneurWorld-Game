@@ -24,6 +24,7 @@ function makeCompany(level = 1): CompanyState {
     reputation: 0,
     automationLevel: 0,
     executiveContracts: {},
+    activeEffects: [],
     lifetimeProfitMinor: 0,
     employeeCount: 1,
     payrollLevel: 1,

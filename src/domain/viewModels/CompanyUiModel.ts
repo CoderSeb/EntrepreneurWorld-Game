@@ -23,6 +23,11 @@ import {
   maxEmployeesForLevel,
 } from '@/domain/companies/EmployeeService';
 import { getLevelProgressRatio } from '@/domain/companies/CompanyProgressionService';
+import { describeIndustryBottleneck } from '@/domain/companies/IndustryMechanicsService';
+import {
+  buildCompanyEconomyBreakdown,
+  EconomyBreakdownLine,
+} from '@/domain/economy/EconomyBreakdownService';
 import {
   getMaxSystemsLevel,
   getNextSystemsUpgradeCostMinor,
@@ -71,6 +76,8 @@ export type CompanyUiModel = {
   maxEmployees: number;
   payrollLevel: number;
   marginalEmployeeProfitMinor: number;
+  economyBreakdown: EconomyBreakdownLine[];
+  bottleneckHint: string | null;
 };
 
 export function industryColor(industryId: string, config?: EconomyConfig): string {
@@ -133,6 +140,13 @@ export function buildCompanyUiModel(
     preferredTrack && preferredTrackLevel < preferredTrack.maxLevel
       ? getUpgradeCost(company, preferredTrack).amountMinorUnits
       : null;
+  const economyBreakdown = buildCompanyEconomyBreakdown(
+    company,
+    config,
+    appState.marketState,
+    subsidiaries,
+    nowUnix,
+  );
 
   return {
     id: company.id,
@@ -177,6 +191,8 @@ export function buildCompanyUiModel(
       company.payrollLevel,
       company.level,
     ),
+    economyBreakdown: economyBreakdown.lines,
+    bottleneckHint: describeIndustryBottleneck(company, config),
   };
 }
 

@@ -1,6 +1,7 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
 import { CompanyState } from '@/domain/core/CompanyState';
 import { ExecutiveContract } from '@/domain/companies/ExecutiveContracts';
+import { CompanyActiveEffect } from '@/domain/companies/ActivityEffectService';
 import { LoanState } from '@/domain/core/LoanState';
 import { PlayerState, createPlayerState } from '@/domain/core/PlayerState';
 import { PurchaseState, createPurchaseState } from '@/domain/core/PurchaseState';
@@ -90,6 +91,12 @@ function companyToDict(company: CompanyState): Record<string, unknown> {
     reputation: company.reputation,
     automation_level: company.automationLevel,
     executive_contracts: executiveContractsToDict(company.executiveContracts),
+    active_effects: company.activeEffects.map((effect) => ({
+      activity_id: effect.activityId,
+      effect_type: effect.effectType,
+      multiplier: effect.multiplier,
+      expires_at_unix: effect.expiresAtUnix,
+    })),
     lifetime_profit_minor: company.lifetimeProfitMinor,
     employee_count: company.employeeCount,
     payroll_level: company.payrollLevel,
@@ -130,6 +137,16 @@ function readExecutiveContracts(payload: Record<string, unknown>): Record<string
   return contracts;
 }
 
+function readActiveEffects(payload: Record<string, unknown>): CompanyActiveEffect[] {
+  const raw = (payload.active_effects as Array<Record<string, unknown>> | undefined) ?? [];
+  return raw.map((effect) => ({
+    activityId: String(effect.activity_id ?? ''),
+    effectType: String(effect.effect_type ?? 'cash_reward') as CompanyActiveEffect['effectType'],
+    multiplier: Number(effect.multiplier ?? 1),
+    expiresAtUnix: Number(effect.expires_at_unix ?? 0),
+  }));
+}
+
 function companyFromDict(payload: Record<string, unknown>): CompanyState {
   return {
     id: String(payload.id ?? ''),
@@ -141,6 +158,7 @@ function companyFromDict(payload: Record<string, unknown>): CompanyState {
     reputation: Number(payload.reputation ?? 0),
     automationLevel: Number(payload.automation_level ?? 0),
     executiveContracts: readExecutiveContracts(payload),
+    activeEffects: readActiveEffects(payload),
     lifetimeProfitMinor: Number(payload.lifetime_profit_minor ?? 0),
     employeeCount: Number(payload.employee_count ?? 0),
     payrollLevel: Number(payload.payroll_level ?? 1),

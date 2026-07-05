@@ -6,7 +6,7 @@ const config = parseEconomyConfig(economyJson as never);
 
 describe('IndustryPresentation', () => {
   it('loads bundled economy config v7 industry UI fields', () => {
-    expect(config.version).toBe(7);
+    expect(config.version).toBe(8);
     const cafe = config.industries.cafe;
     expect(cafe.iconName).toBe('cafe');
     expect(cafe.tagline).toBe('Steady foot traffic');

@@ -5,7 +5,7 @@ import { applyLevelUpgrade } from '@/domain/economy/UpgradeCalculator';
 import { getExpensesPerHour, getRevenuePerHour } from '@/domain/economy/EffectiveEconomyCalculator';
 import { expireExecutiveContracts, isExecutiveHired } from '@/domain/companies/ExecutiveContracts';
 import { applyRankIfImproved } from '@/domain/progression/ProgressionService';
-import { MoneyValue } from '@/domain/money/MoneyValue';
+import { applyActivityEffect } from '@/domain/companies/ActivityEffectService';
 
 export function getAutoLevelThresholdMinor(company: CompanyState, baseRevenuePerHourMinor: number): number {
   return Math.max(25_000, baseRevenuePerHourMinor * company.level * 8);
@@ -155,9 +155,9 @@ function runAutomatedExecutiveTasks(
         continue;
       }
 
-      company.cashBalance = company.cashBalance.add(
-        MoneyValue.fromMinor(activity.rewardMinor * runCount),
-      );
+      for (let runIndex = 0; runIndex < runCount; runIndex += 1) {
+        applyActivityEffect(company, activity, segment.endUnix);
+      }
       readyAt = nextReadyAtUnix;
     }
 

@@ -23,6 +23,7 @@ function makeSubsidiary(industryId: string): CompanyState {
     reputation: 0,
     automationLevel: 0,
     executiveContracts: {},
+    activeEffects: [],
     lifetimeProfitMinor: 0,
     employeeCount: 0,
     payrollLevel: 1,
