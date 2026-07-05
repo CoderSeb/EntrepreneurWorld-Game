@@ -197,6 +197,19 @@ export async function runBackendBootstrap(
   }
 }
 
+export async function uploadCloudSaveDirect(
+  saveData: SaveData,
+  session: AuthSession,
+): Promise<boolean> {
+  const baseUrl = getApiBaseUrl();
+  if (!baseUrl) {
+    return false;
+  }
+
+  const api = new ApiClient(baseUrl);
+  return uploadCloudSave(api, session.accessToken, saveData);
+}
+
 export async function syncCloudSaveNow(
   saveData: SaveData,
   session: AuthSession,

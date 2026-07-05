@@ -8,6 +8,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 type TaskCardProps = {
   label: string;
   rewardMinor: number;
+  instantCashPreviewMinor?: number;
   effectDescription?: string | null;
   ready: boolean;
   cooldownRemaining: number;
@@ -21,6 +22,7 @@ export function TaskCard({
   showCompanyName = true,
   label,
   rewardMinor,
+  instantCashPreviewMinor = 0,
   effectDescription,
   ready,
   cooldownRemaining,
@@ -28,6 +30,8 @@ export function TaskCard({
 }: TaskCardProps) {
   const { formatMoneyCompact } = useGame();
   const { t } = useTranslation();
+
+  const cashPreviewMinor = instantCashPreviewMinor > 0 ? instantCashPreviewMinor : rewardMinor;
 
   const statusText = ready
     ? t.common.ready
@@ -48,9 +52,9 @@ export function TaskCard({
           <Text style={styles.company} numberOfLines={2}>
             {companyName.toUpperCase()}
           </Text>
-          {rewardMinor > 0 ? (
+          {cashPreviewMinor > 0 ? (
             <Text style={[styles.reward, { color: ready ? colors.success : colors.muted }]}>
-              +{formatMoneyCompact(rewardMinor)}
+              +{formatMoneyCompact(cashPreviewMinor)}
             </Text>
           ) : null}
         </View>
@@ -60,9 +64,9 @@ export function TaskCard({
           <Text style={styles.label}>{label}</Text>
           <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
         </View>
-        {rewardMinor > 0 && !showCompanyName ? (
+        {cashPreviewMinor > 0 && !showCompanyName ? (
           <Text style={[styles.reward, { color: ready ? colors.success : colors.muted }]}>
-            +{formatMoneyCompact(rewardMinor)}
+            +{formatMoneyCompact(cashPreviewMinor)}
           </Text>
         ) : null}
       </View>

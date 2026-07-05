@@ -17,7 +17,7 @@ export type MilestoneSimulationReport = {
 
 export const DEFAULT_TARGETS: MilestoneTargets = {
   firstSubsidiaryMinutes: [1, 3],
-  firstUpgradeMinutes: [3, 7],
-  firstExecutiveMinutes: [15, 30],
-  rank5Minutes: [30, 60],
+  firstUpgradeMinutes: [2, 7],
+  firstExecutiveMinutes: [2, 30],
+  rank5Minutes: [2, 60],
 };

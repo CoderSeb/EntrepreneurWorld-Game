@@ -83,10 +83,10 @@
       "id": "serve_customers",
       "display_name": "Serve customers",
       "effect_type": "temporary_revenue_multiplier",
-      "effect_multiplier": 1.08,
-      "duration_seconds": 1800,
-      "reward_minor": 0,
-      "cooldown_seconds": 300,
+      "effect_multiplier": 1.1,
+      "duration_seconds": 900,
+      "reward_revenue_minutes": 15,
+      "cooldown_seconds": 900,
       "applies_to": "subsidiary"
     },
     {
@@ -94,19 +94,21 @@
       "display_name": "Optimize workflow",
       "effect_type": "temporary_expense_multiplier",
       "effect_multiplier": 0.9,
-      "duration_seconds": 3600,
-      "reward_minor": 0,
-      "cooldown_seconds": 600,
+      "duration_seconds": 1800,
+      "reward_revenue_minutes": 30,
+      "cooldown_seconds": 1800,
       "applies_to": "subsidiary"
     },
     {
       "id": "launch_campaign",
       "display_name": "Launch campaign",
       "effect_type": "temporary_revenue_multiplier",
-      "effect_multiplier": 1.15,
-      "duration_seconds": 7200,
-      "reward_minor": 0,
-      "cooldown_seconds": 1200,
+      "effect_multiplier": 1.08,
+      "secondary_effect_type": "temporary_expense_multiplier",
+      "secondary_effect_multiplier": 0.92,
+      "duration_seconds": 3600,
+      "reward_revenue_minutes": 60,
+      "cooldown_seconds": 3600,
       "applies_to": "subsidiary"
     }
   ],

@@ -13,7 +13,7 @@ import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
 export function CashHeaderBar() {
-  const { dashboard, formatMoney, backendStatus } = useGame();
+  const { dashboard, formatMoney, cloudSync } = useGame();
   const { t } = useTranslation();
   const nowMs = usePayoutDisplayClock();
 
@@ -32,8 +32,10 @@ export function CashHeaderBar() {
   return (
     <View style={styles.root}>
       <View style={styles.left}>
-        {backendStatus.enabled && !backendStatus.connected ? (
+        {cloudSync.status === 'offline' ? (
           <Text style={styles.offline}>{t.header.backendOffline}</Text>
+        ) : cloudSync.status === 'pending' ? (
+          <Text style={styles.offline}>{t.header.cloudSyncPending}</Text>
         ) : null}
         <View style={styles.payoutHeaderRow}>
           <Text style={styles.tickLabel}>{t.header.nextPayout}</Text>

@@ -9,3 +9,7 @@ export function loadEconomyConfig(): EconomyConfig {
   }
   return cached;
 }
+
+export function clearEconomyConfigCache(): void {
+  cached = null;
+}

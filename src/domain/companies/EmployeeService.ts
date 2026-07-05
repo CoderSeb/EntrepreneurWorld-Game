@@ -35,6 +35,10 @@ export function employeePayrollPerHourMinor(employeeCount: number, payrollLevel:
   return Math.round(employeeCount * BASE_SALARY_PER_EMPLOYEE_MINOR * payrollLevel);
 }
 
+export function payrollLevelRevenueBonusPercent(payrollLevel: number): number {
+  return Math.max(0, payrollLevel - 1) * 8;
+}
+
 export function marginalEmployeeProfitMinor(
   employeeCount: number,
   payrollLevel: number,

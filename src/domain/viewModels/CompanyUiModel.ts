@@ -8,7 +8,7 @@ import {
 import { resolveIndustryPresentation } from '@/domain/config/IndustryPresentation';
 import { AppState, findCompany } from '@/domain/core/AppState';
 import { CompanyState } from '@/domain/core/CompanyState';
-import { getActivityCooldownRemaining } from '@/domain/companies/CompanyService';
+import { getActivityUnavailableRemaining } from '@/domain/companies/CompanyService';
 import {
   getExpensesPerHour,
   getRevenuePerHour,
@@ -19,16 +19,21 @@ import {
   isExecutiveHired,
 } from '@/domain/companies/ExecutiveRoles';
 import {
+  employeePayrollPerHourMinor,
+  employeeRevenuePerHourMinor,
   marginalEmployeeProfitMinor,
   maxEmployeesForLevel,
+  payrollLevelRevenueBonusPercent,
+  MAX_PAYROLL_LEVEL,
 } from '@/domain/companies/EmployeeService';
+import { calculateActivityInstantCashMinor } from '@/domain/companies/ActivityRewardService';
 import { getLevelProgressRatio } from '@/domain/companies/CompanyProgressionService';
 import { describeIndustryBottleneck } from '@/domain/companies/IndustryMechanicsService';
 import {
   getCompanyLifecyclePhase,
   CompanyLifecyclePhase,
 } from '@/domain/companies/CompanyLifecycleService';
-import { describeActivityEffect } from '@/domain/companies/ActivityEffectService';
+import { describeActivityEffect, describeActiveEffectLine } from '@/domain/companies/ActivityEffectService';
 import {
   EXECUTIVE_AUTOMATION_POLICIES,
   ExecutiveAutomationPolicy,
@@ -87,6 +92,12 @@ export type CompanyUiModel = {
   employeeCount: number;
   maxEmployees: number;
   payrollLevel: number;
+  payrollLevelRevenueBonusPercent: number;
+  workforceRevenuePerHourMinor: number;
+  workforcePayrollPerHourMinor: number;
+  workforceNetPerHourMinor: number;
+  nextPayrollLevelRevenueDeltaMinor: number | null;
+  nextPayrollLevelPayrollDeltaMinor: number | null;
   marginalEmployeeProfitMinor: number;
   economyBreakdown: EconomyBreakdownLineUi[];
   economyRevenueBreakdown: EconomyBreakdownLineUi[];
@@ -147,7 +158,7 @@ export function buildCompanyUiModel(
   const activities = getActivitiesForKind(config, company.companyKind);
   let pendingTasks = 0;
   for (const activity of activities) {
-    if (getActivityCooldownRemaining(appState, company.id, activity.id, nowUnix) === 0) {
+    if (getActivityUnavailableRemaining(appState, company, activity.id, nowUnix) === 0) {
       pendingTasks += 1;
     }
   }
@@ -217,6 +228,29 @@ export function buildCompanyUiModel(
     employeeCount: company.employeeCount,
     maxEmployees: maxEmployeesForLevel(company.level),
     payrollLevel: company.payrollLevel,
+    payrollLevelRevenueBonusPercent: payrollLevelRevenueBonusPercent(company.payrollLevel),
+    workforceRevenuePerHourMinor: employeeRevenuePerHourMinor(
+      company.employeeCount,
+      company.payrollLevel,
+      company.level,
+    ),
+    workforcePayrollPerHourMinor: employeePayrollPerHourMinor(
+      company.employeeCount,
+      company.payrollLevel,
+    ),
+    workforceNetPerHourMinor:
+      employeeRevenuePerHourMinor(company.employeeCount, company.payrollLevel, company.level)
+      - employeePayrollPerHourMinor(company.employeeCount, company.payrollLevel),
+    nextPayrollLevelRevenueDeltaMinor:
+      company.payrollLevel < MAX_PAYROLL_LEVEL
+        ? employeeRevenuePerHourMinor(company.employeeCount, company.payrollLevel + 1, company.level)
+          - employeeRevenuePerHourMinor(company.employeeCount, company.payrollLevel, company.level)
+        : null,
+    nextPayrollLevelPayrollDeltaMinor:
+      company.payrollLevel < MAX_PAYROLL_LEVEL
+        ? employeePayrollPerHourMinor(company.employeeCount, company.payrollLevel + 1)
+          - employeePayrollPerHourMinor(company.employeeCount, company.payrollLevel)
+        : null,
     marginalEmployeeProfitMinor: marginalEmployeeProfitMinor(
       company.employeeCount,
       company.payrollLevel,
@@ -269,6 +303,7 @@ export type TaskUiModel = {
   activityId: string;
   label: string;
   rewardMinor: number;
+  instantCashPreviewMinor: number;
   effectDescription: string | null;
   cooldownRemaining: number;
   ready: boolean;
@@ -289,8 +324,8 @@ function buildActiveEffectSummaries(
         return effect.activityId;
       }
       const label = translations ? getActivityLabel(activity.id, translations) : activity.displayName;
-      const description = describeActivityEffect(activity);
-      return description ? `${label}: ${description}` : label;
+      const description = describeActiveEffectLine(effect);
+      return `${label}: ${description}`;
     });
 }
 
@@ -309,10 +344,18 @@ export function buildTaskUiModels(
       continue;
     }
     for (const activity of getActivitiesForKind(config, company.companyKind)) {
-      const cooldownRemaining = getActivityCooldownRemaining(
+      const cooldownRemaining = getActivityUnavailableRemaining(
         appState,
-        company.id,
+        company,
         activity.id,
+        nowUnix,
+      );
+      const instantCashPreviewMinor = calculateActivityInstantCashMinor(
+        activity,
+        company,
+        config,
+        appState.marketState,
+        appState.companies,
         nowUnix,
       );
       tasks.push({
@@ -322,6 +365,7 @@ export function buildTaskUiModels(
         activityId: activity.id,
         label: translations ? getActivityLabel(activity.id, translations) : activity.displayName,
         rewardMinor: activity.rewardMinor,
+        instantCashPreviewMinor,
         effectDescription: describeActivityEffect(activity),
         cooldownRemaining,
         ready: cooldownRemaining === 0,

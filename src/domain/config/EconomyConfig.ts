@@ -19,8 +19,11 @@ export type ActivityDefinition = {
   displayName: string;
   effectType: ActivityEffectType;
   effectMultiplier: number;
+  secondaryEffectType?: ActivityEffectType;
+  secondaryEffectMultiplier?: number;
   durationSeconds: number;
   rewardMinor: number;
+  rewardRevenueMinutes: number;
   cooldownSeconds: number;
   appliesTo: string;
   failureChance: number;
@@ -231,8 +234,11 @@ type RawConfig = {
     display_name: string;
     effect_type?: string;
     effect_multiplier?: number;
+    secondary_effect_type?: string;
+    secondary_effect_multiplier?: number;
     duration_seconds?: number;
     reward_minor?: number;
+    reward_revenue_minutes?: number;
     cooldown_seconds: number;
     applies_to: string;
     failure_chance?: number;
@@ -386,8 +392,11 @@ export function parseEconomyConfig(data: RawConfig): EconomyConfig {
       displayName: a.display_name,
       effectType: parseActivityEffectType(a.effect_type, a.reward_minor),
       effectMultiplier: a.effect_multiplier ?? 1,
+      secondaryEffectType: parseOptionalActivityEffectType(a.secondary_effect_type),
+      secondaryEffectMultiplier: a.secondary_effect_multiplier,
       durationSeconds: a.duration_seconds ?? 0,
       rewardMinor: a.reward_minor ?? 0,
+      rewardRevenueMinutes: a.reward_revenue_minutes ?? 0,
       cooldownSeconds: a.cooldown_seconds,
       appliesTo: a.applies_to,
       failureChance: a.failure_chance ?? 0,
@@ -475,6 +484,19 @@ function parseActivityEffectType(
     return rawType;
   }
   return (rewardMinor ?? 0) > 0 ? 'cash_reward' : 'temporary_revenue_multiplier';
+}
+
+function parseOptionalActivityEffectType(
+  rawType: string | undefined,
+): ActivityEffectType | undefined {
+  if (
+    rawType === 'temporary_revenue_multiplier'
+    || rawType === 'temporary_expense_multiplier'
+    || rawType === 'cash_reward'
+  ) {
+    return rawType;
+  }
+  return undefined;
 }
 
 function parseIndustryMechanics(

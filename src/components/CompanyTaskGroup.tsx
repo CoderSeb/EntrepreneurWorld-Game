@@ -37,6 +37,7 @@ export function CompanyTaskGroup({ company, tasks, onRunTask }: CompanyTaskGroup
             key={task.id}
             label={task.label}
             rewardMinor={task.rewardMinor}
+            instantCashPreviewMinor={task.instantCashPreviewMinor}
             effectDescription={task.effectDescription}
             ready={task.ready}
             cooldownRemaining={task.cooldownRemaining}

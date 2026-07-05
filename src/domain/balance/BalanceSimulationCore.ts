@@ -10,7 +10,7 @@ import {
 import {
   createHoldingCompany,
   createSubsidiaryCompany,
-  getActivityCooldownRemaining,
+  getActivityUnavailableRemaining,
   performActivity,
 } from '@/domain/companies/CompanyService';
 import { simulateTick, simulateOfflineForApp } from '@/domain/economy/EconomySimulator';
@@ -92,10 +92,10 @@ export function runEngagedTurn(
 
   if (options.runActivities) {
     for (const activity of getActivitiesForKind(config, subsidiary.companyKind)) {
-      if (getActivityCooldownRemaining(state, subsidiary.id, activity.id, nowUnix) > 0) {
+      if (getActivityUnavailableRemaining(state, subsidiary, activity.id, nowUnix) > 0) {
         continue;
       }
-      performActivity(state, subsidiary, activity, nowUnix);
+      performActivity(state, config, subsidiary, activity, nowUnix);
     }
   }
 

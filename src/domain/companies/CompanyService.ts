@@ -8,7 +8,11 @@ import {
 import { AppState, findCompany, getSubsidiaries } from '@/domain/core/AppState';
 import { CompanyState } from '@/domain/core/CompanyState';
 import { fail, ok, OperationResult } from '@/domain/core/OperationResult';
-import { applyActivityEffect } from '@/domain/companies/ActivityEffectService';
+import {
+  applyActivityEffect,
+  getActivityBoostRemaining,
+} from '@/domain/companies/ActivityEffectService';
+import { calculateActivityInstantCashMinor } from '@/domain/companies/ActivityRewardService';
 import { hasHolding } from '@/domain/core/PlayerState';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { createHolding, createSubsidiary } from '@/domain/companies/CompanyFactory';
@@ -141,6 +145,7 @@ export function upgradeCompany(
 
 export function performActivity(
   appState: AppState,
+  config: EconomyConfig,
   company: CompanyState,
   activity: ActivityDefinition,
   nowUnix: number,
@@ -150,13 +155,25 @@ export function performActivity(
   }
 
   const cooldownKey = `${company.id}:${activity.id}`;
-  const readyAt = appState.activityCooldowns[cooldownKey] ?? 0;
-  if (nowUnix < readyAt) {
-    const remaining = readyAt - nowUnix;
-    return fail('activity_on_cooldown', `Activity available in ${remaining} seconds`);
+  const unavailableRemaining = getActivityUnavailableRemaining(
+    appState,
+    company,
+    activity.id,
+    nowUnix,
+  );
+  if (unavailableRemaining > 0) {
+    return fail('activity_on_cooldown', `Activity available in ${unavailableRemaining} seconds`);
   }
 
-  const result = applyActivityEffect(company, activity, nowUnix);
+  const instantCashMinor = calculateActivityInstantCashMinor(
+    activity,
+    company,
+    config,
+    appState.marketState,
+    getSubsidiaries(appState),
+    nowUnix,
+  );
+  const result = applyActivityEffect(company, activity, nowUnix, { instantCashMinor });
   if (!result.success) {
     return fail('activity_failed', 'Activity could not be applied');
   }
@@ -177,6 +194,22 @@ export function getActivityCooldownRemaining(
 ): number {
   const readyAt = appState.activityCooldowns[`${companyId}:${activityId}`] ?? 0;
   return Math.max(0, readyAt - nowUnix);
+}
+
+export function getActivityUnavailableRemaining(
+  appState: AppState,
+  company: CompanyState,
+  activityId: string,
+  nowUnix: number,
+): number {
+  const cooldownRemaining = getActivityCooldownRemaining(
+    appState,
+    company.id,
+    activityId,
+    nowUnix,
+  );
+  const boostRemaining = getActivityBoostRemaining(company, activityId, nowUnix);
+  return Math.max(cooldownRemaining, boostRemaining);
 }
 
 export function listAvailableIndustries(

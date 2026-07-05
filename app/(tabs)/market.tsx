@@ -226,7 +226,12 @@ const styles = StyleSheet.create({
     gap: spacing.sm,
   },
   rowBody: { flex: 1, flexShrink: 1 },
-  companyName: { fontFamily: fonts.display, fontSize: fontSizes.lg, fontWeight: '700' },
+  companyName: {
+    fontFamily: fonts.display,
+    fontSize: fontSizes.lg,
+    fontWeight: '700',
+    color: colors.text,
+  },
   industry: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, marginTop: 2 },
   revenue: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.textSecondary, marginTop: 2 },
   delta: { fontFamily: fonts.mono, fontSize: fontSizes.lg, fontWeight: '700' },

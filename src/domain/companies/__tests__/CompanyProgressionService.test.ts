@@ -134,10 +134,16 @@ describe('CompanyProgressionService', () => {
       const serveEffects = company.activeEffects.filter(
         (effect) => effect.activityId === 'serve_customers',
       );
-      const activityIds = company.activeEffects.map((effect) => effect.activityId);
 
       expect(serveEffects.length).toBeLessThanOrEqual(1);
-      expect(new Set(activityIds).size).toBe(activityIds.length);
+      const launchEffects = company.activeEffects.filter(
+        (effect) => effect.activityId === 'launch_campaign',
+      );
+      expect(launchEffects.length).toBeLessThanOrEqual(2);
+      for (const activityId of ['serve_customers', 'optimize_workflow'] as const) {
+        const effects = company.activeEffects.filter((effect) => effect.activityId === activityId);
+        expect(effects.length).toBeLessThanOrEqual(1);
+      }
       if (serveEffects[0]) {
         expect(serveEffects[0].multiplier).toBe(serveActivity.effectMultiplier);
       }

@@ -1,11 +1,15 @@
-import { EconomyConfig, getActivitiesForKind, getIndustry } from '@/domain/config/EconomyConfig';
+import { ActivityDefinition, EconomyConfig, getActivitiesForKind, getIndustry } from '@/domain/config/EconomyConfig';
 import { AppState } from '@/domain/core/AppState';
 import { CompanyState, isHolding } from '@/domain/core/CompanyState';
 import { applyLevelUpgrade } from '@/domain/economy/UpgradeCalculator';
 import { getExpensesPerHour, getRevenuePerHour } from '@/domain/economy/EffectiveEconomyCalculator';
 import { expireExecutiveContracts } from '@/domain/companies/ExecutiveContracts';
 import { applyRankIfImproved } from '@/domain/progression/ProgressionService';
-import { applyActivityEffect } from '@/domain/companies/ActivityEffectService';
+import {
+  applyActivityEffect,
+  getActivityBoostRemaining,
+} from '@/domain/companies/ActivityEffectService';
+import { calculateActivityInstantCashMinor } from '@/domain/companies/ActivityRewardService';
 import { accrueIntegrationDebtInterest } from '@/domain/companies/AcquisitionService';
 import {
   getCompanyLifecyclePhase,
@@ -27,6 +31,48 @@ export function getAutoLevelThresholdMinor(company: CompanyState, baseRevenuePer
 }
 
 export { hasTaskAutomationActive };
+
+export function runAutomatedActivityInWindow(
+  appState: AppState,
+  config: EconomyConfig,
+  company: CompanyState,
+  activity: ActivityDefinition,
+  readyAtUnix: number,
+  windowStartUnix: number,
+  windowEndUnix: number,
+): number {
+  if (windowEndUnix <= windowStartUnix) {
+    return readyAtUnix;
+  }
+
+  let readyAt = readyAtUnix;
+  let cursor = Math.max(windowStartUnix, readyAt);
+  while (cursor <= windowEndUnix) {
+    const boostRemaining = getActivityBoostRemaining(company, activity.id, cursor);
+    const cooldownRemaining = Math.max(0, readyAt - cursor);
+    if (boostRemaining === 0 && cooldownRemaining === 0) {
+      const instantCashMinor = calculateActivityInstantCashMinor(
+        activity,
+        company,
+        config,
+        appState.marketState,
+        appState.companies,
+        cursor,
+      );
+      const result = applyActivityEffect(company, activity, cursor, { instantCashMinor });
+      if (result.effectApplied) {
+        readyAt = cursor + activity.cooldownSeconds;
+        cursor = readyAt;
+        continue;
+      }
+    }
+
+    const waitSeconds = Math.max(boostRemaining, cooldownRemaining, 1);
+    cursor += waitSeconds;
+  }
+
+  return readyAt;
+}
 
 export function countAutomatedActivityRuns(
   readyAtUnix: number,
@@ -156,21 +202,15 @@ function runAutomatedExecutiveTasks(
         continue;
       }
 
-      const { runCount, nextReadyAtUnix } = countAutomatedActivityRuns(
+      readyAt = runAutomatedActivityInWindow(
+        appState,
+        config,
+        company,
+        activity,
         readyAt,
         segment.startUnix,
         segment.endUnix,
-        activity.cooldownSeconds,
       );
-
-      if (runCount <= 0) {
-        continue;
-      }
-
-      for (let runIndex = 0; runIndex < runCount; runIndex += 1) {
-        applyActivityEffect(company, activity, segment.endUnix);
-      }
-      readyAt = nextReadyAtUnix;
     }
 
     if (readyAt !== (appState.activityCooldowns[cooldownKey] ?? 0)) {

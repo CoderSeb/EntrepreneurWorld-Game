@@ -392,6 +392,23 @@ export default function CompanyDetailScreen() {
           level: company.level,
         })}
       </Text>
+      <View style={styles.automationRow}>
+        <StatBox
+          label={t.company.workforceRevenue}
+          value={`${formatMoneyCompact(company.workforceRevenuePerHourMinor)}/h`}
+          small
+        />
+        <StatBox
+          label={t.company.workforcePayroll}
+          value={`${formatMoneyCompact(company.workforcePayrollPerHourMinor)}/h`}
+          small
+        />
+        <StatBox
+          label={t.company.workforceNet}
+          value={`${formatMoneyCompact(company.workforceNetPerHourMinor)}/h`}
+          small
+        />
+      </View>
       <View style={styles.employeeRow}>
         <StatBox label={t.company.employeeCount} value={String(company.employeeCount)} small />
         <View style={styles.stepper}>
@@ -432,6 +449,21 @@ export default function CompanyDetailScreen() {
           </Pressable>
         </View>
       </View>
+      <Text style={styles.healthMeta}>
+        {interpolate(t.company.payrollLevelDetail, {
+          level: company.payrollLevel,
+          bonus: company.payrollLevelRevenueBonusPercent,
+        })}
+      </Text>
+      {company.nextPayrollLevelRevenueDeltaMinor !== null
+      && company.nextPayrollLevelPayrollDeltaMinor !== null ? (
+        <Text style={styles.healthMeta}>
+          {interpolate(t.company.payrollLevelNext, {
+            revenue: formatMoneyCompact(company.nextPayrollLevelRevenueDeltaMinor),
+            cost: formatMoneyCompact(company.nextPayrollLevelPayrollDeltaMinor),
+          })}
+        </Text>
+      ) : null}
       <Text
         style={[
           styles.healthMeta,
@@ -484,6 +516,11 @@ export default function CompanyDetailScreen() {
                       })}
                 {task.effectDescription
                   ? interpolate(t.company.taskEffect, { effect: task.effectDescription })
+                  : ''}
+                {task.instantCashPreviewMinor > 0
+                  ? interpolate(t.company.taskInstantCash, {
+                      reward: formatMoneyCompact(task.instantCashPreviewMinor),
+                    })
                   : task.rewardMinor > 0
                     ? interpolate(t.company.taskReward, { reward: formatMoneyCompact(task.rewardMinor) })
                     : ''}

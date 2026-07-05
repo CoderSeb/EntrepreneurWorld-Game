@@ -59,9 +59,14 @@ import {
   BackendStatus,
   deletePlayerAccount,
   runBackendBootstrap,
-  syncCloudSaveNow,
-  uploadCloudSaveIfNeeded,
+  uploadCloudSaveDirect,
 } from '@/services/backend/BackendBootstrapService';
+import {
+  buildCloudSyncPresentation,
+  CloudSyncPresentation,
+  CloudSyncStatus,
+  shouldScheduleCloudUpload,
+} from '@/services/backend/CloudSyncPresentation';
 import { AuthSession, clearAuthSession } from '@/services/auth/authSessionStore';
 import {
   calculateSalaryPreview,
@@ -112,6 +117,7 @@ type GameContextValue = {
   ready: boolean;
   config: EconomyConfig;
   backendStatus: BackendStatus;
+  cloudSync: CloudSyncPresentation;
   lastSimTickMs: number;
   lastSaveError: string | null;
   dashboard: ReturnType<typeof buildDashboardViewModel>;
@@ -185,6 +191,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [ready, setReady] = useState(false);
   const [tick, setTick] = useState(0);
   const [backendStatus, setBackendStatus] = useState<BackendStatus>(createInitialBackendStatus);
+  const [cloudSyncDirty, setCloudSyncDirty] = useState(false);
+  const [cloudSyncSyncing, setCloudSyncSyncing] = useState(false);
   const [offlineSummary, setOfflineSummary] = useState<OfflineSummary | null>(null);
   const [lastSimTickMs, setLastSimTickMs] = useState(() => Date.now());
   const [lastSaveError, setLastSaveError] = useState<string | null>(null);
@@ -193,36 +201,81 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const appStateRef = useRef<AppState>(createFreshAppState(nowUnix()));
   const sessionRef = useRef<AuthSession | null>(null);
   const backendStatusRef = useRef<BackendStatus>(createInitialBackendStatus());
+  const cloudSyncDirtyRef = useRef(false);
+  const cloudSyncInFlightRef = useRef(false);
   const marketRefreshRef = useRef(0);
   const hasIncomeCompaniesRef = useRef(false);
 
   const bump = useCallback(() => setTick((value) => value + 1), []);
 
-  const syncToCloud = useCallback(async (saveData: SaveData) => {
-    const session = sessionRef.current;
-    const status = backendStatusRef.current;
-    if (!session || !status.cloudSaveEnabled) {
-      return;
-    }
+  const scheduleCloudSync = useCallback(
+    async (force: boolean) => {
+      const session = sessionRef.current;
+      const status = backendStatusRef.current;
+      if (!session || !status.cloudSaveEnabled || !status.connected) {
+        return;
+      }
+      if (cloudSyncInFlightRef.current) {
+        return;
+      }
 
-    const uploaded = await uploadCloudSaveIfNeeded(saveData, session, status.cloudSaveEnabled);
-    if (uploaded) {
-      const syncedAt = nowUnix();
-      backendStatusRef.current = { ...backendStatusRef.current, lastSyncAtUnix: syncedAt, lastError: null };
-      setBackendStatus((prev) => ({ ...prev, lastSyncAtUnix: syncedAt, lastError: null }));
-    }
-  }, []);
+      const now = nowUnix();
+      if (
+        !shouldScheduleCloudUpload(now, status.lastSyncAtUnix, cloudSyncDirtyRef.current, force)
+      ) {
+        return;
+      }
 
-  const persistGame = useCallback(async () => {
-    const result = await saveGame(appStateRef.current, config, nowUnix());
-    if (result.success) {
-      setLastSaveError(null);
-      await syncToCloud(result.data);
-    } else {
-      setLastSaveError(result.errorMessage);
-    }
-    return result;
-  }, [config, syncToCloud]);
+      cloudSyncInFlightRef.current = true;
+      setCloudSyncSyncing(true);
+      try {
+        const saveResult = await saveGame(appStateRef.current, config, now);
+        if (!saveResult.success) {
+          return;
+        }
+
+        const uploaded = await uploadCloudSaveDirect(saveResult.data, session);
+        if (uploaded) {
+          cloudSyncDirtyRef.current = false;
+          setCloudSyncDirty(false);
+          backendStatusRef.current = {
+            ...backendStatusRef.current,
+            lastSyncAtUnix: now,
+            lastError: null,
+          };
+          setBackendStatus((prev) => ({ ...prev, lastSyncAtUnix: now, lastError: null }));
+        } else {
+          const message = 'Cloud upload failed';
+          backendStatusRef.current = { ...backendStatusRef.current, lastError: message };
+          setBackendStatus((prev) => ({ ...prev, lastError: message }));
+        }
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'Cloud sync failed';
+        backendStatusRef.current = { ...backendStatusRef.current, lastError: message };
+        setBackendStatus((prev) => ({ ...prev, lastError: message }));
+      } finally {
+        cloudSyncInFlightRef.current = false;
+        setCloudSyncSyncing(false);
+      }
+    },
+    [config],
+  );
+
+  const persistGame = useCallback(
+    async (options?: { forceCloudSync?: boolean }) => {
+      const result = await saveGame(appStateRef.current, config, nowUnix());
+      if (result.success) {
+        setLastSaveError(null);
+        cloudSyncDirtyRef.current = true;
+        setCloudSyncDirty(true);
+        await scheduleCloudSync(options?.forceCloudSync ?? false);
+      } else {
+        setLastSaveError(result.errorMessage);
+      }
+      return result;
+    },
+    [config, scheduleCloudSync],
+  );
 
   const bootstrap = useCallback(async () => {
     const now = nowUnix();
@@ -236,6 +289,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     sessionRef.current = backend.session;
     backendStatusRef.current = backend.status;
     setBackendStatus(backend.status);
+    cloudSyncDirtyRef.current = false;
+    setCloudSyncDirty(false);
 
     const state = appStateRef.current;
     const activeConfig = backend.economyConfig;
@@ -337,7 +392,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
     const subscription = RNAppState.addEventListener('change', (nextState) => {
       if (nextState === 'background' || nextState === 'inactive') {
-        persistGame().catch(() => undefined);
+        persistGame({ forceCloudSync: true }).catch(() => undefined);
       }
     });
 
@@ -394,6 +449,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       ready,
       config,
       backendStatus,
+      cloudSync: buildCloudSyncPresentation(backendStatus, cloudSyncDirty, cloudSyncSyncing),
       lastSimTickMs,
       lastSaveError,
       dashboard,
@@ -423,7 +479,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           if (!activity) {
             return { success: false, errorCode: 'unknown_activity', errorMessage: 'Activity not found' };
           }
-          return performActivity(state, company, activity, now);
+          return performActivity(state, config, company, activity, now);
         }),
       hireExecutiveRole: (companyId, roleId) =>
         mutate(() => hireExecutiveRole(state, config, companyId, roleId, nowUnix())),
@@ -471,62 +527,87 @@ export function GameProvider({ children }: { children: ReactNode }) {
         await persistGame();
       },
       syncCloudNow: async () => {
-        const session = sessionRef.current;
-        if (!session) {
-          return { success: false, message: 'Not signed in to backend' };
-        }
-        if (!backendStatusRef.current.cloudSaveEnabled) {
-          return { success: false, message: 'Cloud save is disabled' };
+        if (!backendStatusRef.current.enabled) {
+          return { success: false, message: 'Cloud sync is disabled in this build' };
         }
 
-        const saveResult = await saveGame(state, config, nowUnix());
-        if (!saveResult.success) {
-          return { success: false, message: 'Local save failed' };
+        if (!backendStatusRef.current.connected) {
+          const loadResult = await loadGame();
+          const localSave =
+            loadResult.success && loadResult.data.hasLoadedSave ? loadResult.data.saveData : null;
+          const localHasSave = Boolean(loadResult.success && loadResult.data.hasLoadedSave);
+          const reconnectNow = nowUnix();
+          const backend = await runBackendBootstrap(localSave, localHasSave, reconnectNow);
+
+          setConfig(backend.economyConfig);
+          sessionRef.current = backend.session;
+          backendStatusRef.current = backend.status;
+          setBackendStatus(backend.status);
+          cloudSyncDirtyRef.current = false;
+          setCloudSyncDirty(false);
+
+          if (backend.session?.playerId) {
+            state.player.playerId = backend.session.playerId;
+          }
+          applyEntitlementsToAppState(state, backend.entitlements, reconnectNow);
+          bump();
+
+          if (!backend.status.connected || !backend.session) {
+            return {
+              success: false,
+              message: backend.status.lastError ?? 'Could not reach cloud sync',
+            };
+          }
         }
 
-        const result = await syncCloudSaveNow(saveResult.data, session);
-        if (result.success && result.lastSyncAtUnix) {
-          backendStatusRef.current = {
-            ...backendStatusRef.current,
-            lastSyncAtUnix: result.lastSyncAtUnix,
-            lastError: null,
-          };
-          setBackendStatus((prev) => ({
-            ...prev,
-            lastSyncAtUnix: result.lastSyncAtUnix,
-            lastError: null,
-          }));
-        } else if (!result.success) {
-          setBackendStatus((prev) => ({ ...prev, lastError: result.message }));
+        if (!backendStatusRef.current.cloudSaveEnabled || !sessionRef.current) {
+          return { success: false, message: 'Cloud save is not available' };
         }
 
-        return { success: result.success, message: result.message };
+        cloudSyncDirtyRef.current = true;
+        setCloudSyncDirty(true);
+        await scheduleCloudSync(true);
+
+        const status = backendStatusRef.current;
+        if (status.lastError) {
+          return { success: false, message: status.lastError };
+        }
+        if (cloudSyncDirtyRef.current) {
+          return { success: false, message: 'Cloud upload failed' };
+        }
+
+        return { success: true, message: 'Cloud save synced' };
       },
       reconnectBackend: async () => {
-        const loadResult = await loadGame();
-        const localSave =
-          loadResult.success && loadResult.data.hasLoadedSave ? loadResult.data.saveData : null;
-        const localHasSave = Boolean(loadResult.success && loadResult.data.hasLoadedSave);
-        const reconnectNow = nowUnix();
-        const backend = await runBackendBootstrap(localSave, localHasSave, reconnectNow);
+        const result = await (async () => {
+          const loadResult = await loadGame();
+          const localSave =
+            loadResult.success && loadResult.data.hasLoadedSave ? loadResult.data.saveData : null;
+          const localHasSave = Boolean(loadResult.success && loadResult.data.hasLoadedSave);
+          const reconnectNow = nowUnix();
+          const backend = await runBackendBootstrap(localSave, localHasSave, reconnectNow);
 
-        setConfig(backend.economyConfig);
-        sessionRef.current = backend.session;
-        backendStatusRef.current = backend.status;
-        setBackendStatus(backend.status);
+          setConfig(backend.economyConfig);
+          sessionRef.current = backend.session;
+          backendStatusRef.current = backend.status;
+          setBackendStatus(backend.status);
+          cloudSyncDirtyRef.current = false;
+          setCloudSyncDirty(false);
 
-        if (backend.session?.playerId) {
-          state.player.playerId = backend.session.playerId;
-        }
-        applyEntitlementsToAppState(state, backend.entitlements, reconnectNow);
-        bump();
+          if (backend.session?.playerId) {
+            state.player.playerId = backend.session.playerId;
+          }
+          applyEntitlementsToAppState(state, backend.entitlements, reconnectNow);
+          bump();
 
-        const message =
-          backend.status.connected
-            ? 'Connected to API'
-            : backend.status.lastError ?? 'API unreachable — start with pwsh ./scripts/run-api-with-postgres.ps1';
+          const message =
+            backend.status.connected
+              ? 'Connected to cloud sync'
+              : backend.status.lastError ?? 'Could not reach cloud sync';
 
-        return { success: backend.status.connected, message };
+          return { success: backend.status.connected, message };
+        })();
+        return result;
       },
       deleteAccount: async () => {
         const session = sessionRef.current;
@@ -585,7 +666,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       formatMoneyCompact: (minorUnits: number) => formatMoneyCompact(minorUnits, displayCurrency),
       formatMoney: (minorUnits: number) => formatMoney(minorUnits, displayCurrency),
     };
-  }, [tick, ready, config, backendStatus, lastSimTickMs, lastSaveError, offlineSummary, mutate, persistGame, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
+  }, [tick, ready, config, backendStatus, cloudSyncDirty, cloudSyncSyncing, lastSimTickMs, lastSaveError, offlineSummary, mutate, persistGame, scheduleCloudSync, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
 
   useEffect(() => {
     if (ready) {

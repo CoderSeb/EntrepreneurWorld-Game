@@ -18,10 +18,10 @@ import {
 import { getLoanProductLabel } from '@/i18n/configLabels';
 import { DisplayCurrencyCode } from '@/domain/money/MoneyFormatter';
 import { SupportedLocale } from '@/i18n/locales';
+import { cloudSyncStatusLabel } from '@/services/backend/CloudSyncPresentation';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { TreasuryPanel } from '@/components/TreasuryPanel';
-import { getApiBaseUrl } from '@/config/backendConfig';
 
 function formatSyncTime(unix: number | null, neverLabel: string): string {
   if (!unix) {
@@ -35,13 +35,13 @@ export default function ExecScreen() {
     dashboard,
     config,
     backendStatus,
+    cloudSync,
     activeLoans,
     borrowLoan,
     repayLoanById,
     saveNow,
     syncCloudNow,
     deleteAccount,
-    reconnectBackend,
     lastSaveError,
     displayCurrency,
     setDisplayCurrency,
@@ -53,16 +53,30 @@ export default function ExecScreen() {
   const { busy, run } = useActionFeedback();
   const [deletingAccount, setDeletingAccount] = useState(false);
 
-  const apiBaseUrl = getApiBaseUrl();
   const rank = dashboard.businessRank;
   const annualRate = effectiveAnnualInterestRate(rank);
   const currencyOptions: DisplayCurrencyCode[] = ['USD', 'EUR', 'SEK'];
 
-  const backendStatusLabel = backendStatus.enabled
-    ? backendStatus.connected
-      ? t.exec.connected
-      : t.exec.offline
-    : t.exec.localOnly;
+  const cloudStatusLabel = cloudSyncStatusLabel(cloudSync.status, {
+    synced: t.exec.cloudSyncSynced,
+    pending: t.exec.cloudSyncPending,
+    syncing: t.exec.cloudSyncSyncing,
+    offline: t.exec.cloudSyncOffline,
+    unavailable: t.exec.cloudSyncUnavailable,
+    disabled: t.exec.cloudSyncDisabled,
+    error: t.exec.cloudSyncError,
+  });
+
+  const statusStyle =
+    cloudSync.status === 'synced'
+      ? styles.statusOk
+      : cloudSync.status === 'syncing'
+        ? styles.statusNeutral
+        : cloudSync.status === 'pending'
+          ? styles.statusWarn
+          : cloudSync.status === 'offline' || cloudSync.status === 'disabled'
+            ? styles.statusMuted
+            : styles.statusWarn;
 
   const confirmDeleteAccount = () => {
     if (!backendStatus.connected || deletingAccount) {
@@ -121,67 +135,35 @@ export default function ExecScreen() {
 
       <TreasuryPanel />
 
-      <SectionHeader title={t.exec.backendTitle} subtitle={t.exec.backendSubtitle} />
+      <SectionHeader title={t.exec.cloudSyncTitle} subtitle={t.exec.cloudSyncSubtitle} />
       <View style={styles.backendCard}>
         <View style={styles.backendRow}>
-          <Text style={styles.settingLabel}>{t.exec.api}</Text>
-          <Text style={styles.backendValue} numberOfLines={1}>
-            {apiBaseUrl ?? t.exec.apiDisabled}
-          </Text>
+          <Text style={styles.settingLabel}>{t.exec.cloudSyncStatus}</Text>
+          <Text style={[styles.backendValue, statusStyle]}>{cloudStatusLabel}</Text>
         </View>
-        <View style={styles.backendRow}>
-          <Text style={styles.settingLabel}>{t.exec.status}</Text>
-          <Text style={[styles.backendValue, backendStatus.connected ? styles.statusOk : styles.statusWarn]}>
-            {backendStatusLabel}
-          </Text>
-        </View>
-        {backendStatus.playerId ? (
+        {cloudSync.status !== 'disabled' && cloudSync.status !== 'unavailable' ? (
           <View style={styles.backendRow}>
-            <Text style={styles.settingLabel}>{t.exec.playerId}</Text>
-            <Text style={styles.backendMono} numberOfLines={1}>
-              {backendStatus.playerId}
-            </Text>
-          </View>
-        ) : null}
-        <View style={styles.backendRow}>
-          <Text style={styles.settingLabel}>{t.exec.economyConfig}</Text>
-          <Text style={styles.backendValue}>{backendStatus.economyConfigSource}</Text>
-        </View>
-        {backendStatus.cloudSaveEnabled ? (
-          <View style={styles.backendRow}>
-            <Text style={styles.settingLabel}>{t.exec.lastCloudSync}</Text>
+            <Text style={styles.settingLabel}>{t.exec.cloudSyncLastSynced}</Text>
             <Text style={styles.backendValue}>
-              {formatSyncTime(backendStatus.lastSyncAtUnix, t.common.never)}
+              {formatSyncTime(cloudSync.lastSyncAtUnix, t.common.never)}
             </Text>
           </View>
         ) : null}
-        {backendStatus.lastError ? <Text style={styles.backendError}>{backendStatus.lastError}</Text> : null}
-        {backendStatus.enabled && !backendStatus.connected ? (
-          <>
-            <Text style={styles.backendHint}>{t.exec.reconnectHint}</Text>
-            <PrimaryButton
-              label={busy ? t.common.syncing : t.exec.reconnectAction}
-              onPress={() =>
-                run(reconnectBackend, t.exec.reconnectAction, {
-                  complete: interpolate(t.common.actionComplete, { title: t.exec.reconnectAction }),
-                  failed: interpolate(t.common.actionFailed, { title: t.exec.reconnectAction }),
-                })
-              }
-              disabled={busy || deletingAccount}
-            />
-          </>
+        {cloudSync.statusMessage ? <Text style={styles.backendError}>{cloudSync.statusMessage}</Text> : null}
+        {cloudSync.status === 'offline' ? (
+          <Text style={styles.backendHint}>{t.exec.cloudSyncHintOffline}</Text>
         ) : null}
         {backendStatus.welcomeTitle ? <Text style={styles.welcomeBanner}>{backendStatus.welcomeTitle}</Text> : null}
-        {backendStatus.cloudSaveEnabled && backendStatus.connected ? (
+        {cloudSync.canSyncNow ? (
           <PrimaryButton
-            label={busy ? t.common.syncing : t.common.syncCloud}
+            label={busy || cloudSync.status === 'syncing' ? t.common.syncing : t.exec.cloudSyncSyncNow}
             onPress={() =>
-              run(syncCloudNow, t.exec.cloudSyncAction, {
-                complete: interpolate(t.common.actionComplete, { title: t.exec.cloudSyncAction }),
-                failed: interpolate(t.common.actionFailed, { title: t.exec.cloudSyncAction }),
+              run(syncCloudNow, t.exec.cloudSyncSyncNow, {
+                complete: interpolate(t.common.actionComplete, { title: t.exec.cloudSyncSyncNow }),
+                failed: interpolate(t.common.actionFailed, { title: t.exec.cloudSyncSyncNow }),
               })
             }
-            disabled={busy || deletingAccount}
+            disabled={busy || deletingAccount || cloudSync.status === 'syncing'}
           />
         ) : null}
       </View>
@@ -339,16 +321,10 @@ const styles = StyleSheet.create({
     flexShrink: 1,
     textAlign: 'right',
   },
-  backendMono: {
-    fontFamily: fonts.mono,
-    fontSize: fontSizes.xs,
-    color: colors.muted,
-    flexShrink: 1,
-    textAlign: 'right',
-    maxWidth: '60%',
-  },
   statusOk: { color: colors.success },
   statusWarn: { color: colors.warning },
+  statusMuted: { color: colors.muted },
+  statusNeutral: { color: colors.primary },
   backendError: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.danger },
   backendHint: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, lineHeight: 16 },
   welcomeBanner: { fontFamily: fonts.body, fontSize: fontSizes.sm, color: colors.primary },

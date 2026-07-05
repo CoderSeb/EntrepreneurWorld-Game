@@ -2,18 +2,22 @@ import { CompanyKinds } from '@/domain/core/CompanyKinds';
 import { createAppState } from '@/domain/core/AppState';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { parseEconomyConfig } from '@/domain/config/EconomyConfig';
+import { performActivity } from '@/domain/companies/CompanyService';
+import { calculateActivityInstantCashMinor } from '@/domain/companies/ActivityRewardService';
 import {
   applyActivityEffect,
   describeActivityEffect,
+  getActivityExpenseMultiplier,
   getActivityRevenueMultiplier,
 } from '@/domain/companies/ActivityEffectService';
-import { getRevenuePerHour, getExpensesPerHour } from '@/domain/economy/EffectiveEconomyCalculator';
+import { getExpensesPerHour, getRevenuePerHour } from '@/domain/economy/EffectiveEconomyCalculator';
 import economyJson from '../../../../assets/config/economy_config_v1.json';
 
 const config = parseEconomyConfig(economyJson as never);
 
 describe('ActivityEffectService', () => {
   const serveActivity = config.activities.find((entry) => entry.id === 'serve_customers')!;
+  const launchActivity = config.activities.find((entry) => entry.id === 'launch_campaign')!;
 
   function createCafeCompany() {
     return {
@@ -42,32 +46,70 @@ describe('ActivityEffectService', () => {
     };
   }
 
-  it('describes effect duration without rounding short boosts to whole hours', () => {
-    expect(describeActivityEffect(serveActivity)).toContain('30m');
-    expect(describeActivityEffect(serveActivity)).not.toContain('1h');
+  it('describes configured boost durations from economy config', () => {
+    expect(describeActivityEffect(serveActivity)).toContain('15m');
+    expect(describeActivityEffect(serveActivity)).toContain('+10% rev');
+    expect(describeActivityEffect(launchActivity)).toContain('1h');
+    expect(describeActivityEffect(launchActivity)).toContain('+8% rev');
+    expect(describeActivityEffect(launchActivity)).toContain('-8% exp');
   });
 
   it('applies temporary revenue boost instead of large cash rewards', () => {
-    const activity = config.activities.find((entry) => entry.id === 'launch_campaign')!;
     const company = createCafeCompany();
 
     const beforeCash = company.cashBalance.amountMinorUnits;
-    const result = applyActivityEffect(company, activity, 1_000);
+    const result = applyActivityEffect(company, launchActivity, 1_000, { instantCashMinor: 0 });
     expect(result.success).toBe(true);
     expect(result.effectApplied).toBe(true);
     expect(company.cashBalance.amountMinorUnits).toBe(beforeCash);
     expect(getActivityRevenueMultiplier(company, 1_000)).toBeGreaterThan(1);
+    expect(getActivityExpenseMultiplier(company, 1_000)).toBeLessThan(1);
   });
 
-  it('refreshes the same activity instead of stacking duplicate effects', () => {
+  it('does not re-apply the same activity while its boost is active', () => {
     const company = createCafeCompany();
 
-    for (let run = 0; run < 8; run += 1) {
-      applyActivityEffect(company, serveActivity, 1_000 + run * 60);
-    }
+    applyActivityEffect(company, serveActivity, 1_000, { instantCashMinor: 0 });
+    applyActivityEffect(company, serveActivity, 1_100, { instantCashMinor: 0 });
+    applyActivityEffect(company, serveActivity, 1_200, { instantCashMinor: 0 });
 
     expect(company.activeEffects).toHaveLength(1);
-    expect(getActivityRevenueMultiplier(company, 1_500)).toBe(serveActivity.effectMultiplier);
+    expect(company.activeEffects[0].expiresAtUnix).toBe(1_000 + serveActivity.durationSeconds);
+    expect(getActivityRevenueMultiplier(company, 1_200)).toBe(serveActivity.effectMultiplier);
+  });
+
+  it('blocks performActivity while the boost is still active', () => {
+    const company = createCafeCompany();
+    const state = createAppState();
+    state.companies.push(company);
+
+    const first = performActivity(state, config, company, serveActivity, 1_000);
+    expect(first.success).toBe(true);
+
+    const blocked = performActivity(state, config, company, serveActivity, 1_100);
+    expect(blocked.success).toBe(false);
+    expect(blocked.errorCode).toBe('activity_on_cooldown');
+  });
+
+  it('grants instant cash based on company revenue minutes', () => {
+    const company = createCafeCompany();
+    const state = createAppState();
+    state.companies.push(company);
+
+    const expectedCash = calculateActivityInstantCashMinor(
+      serveActivity,
+      company,
+      config,
+      state.marketState,
+      state.companies,
+      1_000,
+    );
+    expect(expectedCash).toBeGreaterThan(0);
+
+    const beforeCash = company.cashBalance.amountMinorUnits;
+    const result = performActivity(state, config, company, serveActivity, 1_000);
+    expect(result.success).toBe(true);
+    expect(company.cashBalance.amountMinorUnits - beforeCash).toBe(expectedCash);
   });
 });
 
@@ -83,11 +125,11 @@ describe('Industry mechanics in effective economy', () => {
       cashBalance: MoneyValue.zero(),
       reputation: 0,
       automationLevel: 0,
-    automationPolicy: 'balanced' as const,
+      automationPolicy: 'balanced' as const,
       executiveContracts: {},
       activeEffects: [],
-    integrationDebtMinor: 0,
-    integrationComplete: true,
+      integrationDebtMinor: 0,
+      integrationComplete: true,
       lifetimeProfitMinor: 0,
       employeeCount: 1,
       payrollLevel: 1,
