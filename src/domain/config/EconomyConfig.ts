@@ -28,12 +28,16 @@ export type ActivityDefinition = {
 };
 
 export type IndustryMechanicsDefinition = {
-  primaryBottleneck: 'capacity' | 'retention' | 'inventory' | 'none';
+  primaryBottleneck: 'capacity' | 'retention' | 'inventory' | 'leverage' | 'none';
   capacityPerEmployeeMinor?: number;
   inventoryBaseCapMinor?: number;
   inventoryBonusPerMarketingLevel?: number;
   baseChurnRate?: number;
   retentionBonusPerQualityLevel?: number;
+  baseVacancyRate?: number;
+  vacancyReductionPerExpansionLevel?: number;
+  leverageInterestRateHourly?: number;
+  leverageMultiplierPerExpansionLevel?: number;
 };
 
 export type MarketSignalDefinition = {
@@ -321,6 +325,10 @@ type RawConfig = {
       inventory_bonus_per_marketing_level?: number;
       base_churn_rate?: number;
       retention_bonus_per_quality_level?: number;
+      base_vacancy_rate?: number;
+      vacancy_reduction_per_expansion_level?: number;
+      leverage_interest_rate_hourly?: number;
+      leverage_multiplier_per_expansion_level?: number;
     };
   }>;
   treasury?: {
@@ -477,6 +485,10 @@ function parseIndustryMechanics(
     inventory_bonus_per_marketing_level?: number;
     base_churn_rate?: number;
     retention_bonus_per_quality_level?: number;
+    base_vacancy_rate?: number;
+    vacancy_reduction_per_expansion_level?: number;
+    leverage_interest_rate_hourly?: number;
+    leverage_multiplier_per_expansion_level?: number;
   },
 ): IndustryMechanicsDefinition | undefined {
   if (!raw) {
@@ -493,6 +505,8 @@ function parseIndustryMechanics(
     primaryBottleneck = 'retention';
   } else if (bottleneck === 'inventory') {
     primaryBottleneck = 'inventory';
+  } else if (bottleneck === 'leverage') {
+    primaryBottleneck = 'leverage';
   }
 
   return {
@@ -502,5 +516,9 @@ function parseIndustryMechanics(
     inventoryBonusPerMarketingLevel: raw.inventory_bonus_per_marketing_level,
     baseChurnRate: raw.base_churn_rate,
     retentionBonusPerQualityLevel: raw.retention_bonus_per_quality_level,
+    baseVacancyRate: raw.base_vacancy_rate,
+    vacancyReductionPerExpansionLevel: raw.vacancy_reduction_per_expansion_level,
+    leverageInterestRateHourly: raw.leverage_interest_rate_hourly,
+    leverageMultiplierPerExpansionLevel: raw.leverage_multiplier_per_expansion_level,
   };
 }

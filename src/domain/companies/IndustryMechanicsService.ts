@@ -21,6 +21,53 @@ export function getIndustryCapacityCapMinor(
   return Math.round(company.employeeCount * perEmployee * operationsBonus);
 }
 
+export function getIndustryLeverageRevenueMultiplier(
+  company: CompanyState,
+  industry: IndustryDefinition,
+): number {
+  if (industry.mechanics?.primaryBottleneck !== 'leverage') {
+    return 1;
+  }
+
+  const expansionLevel = getTrackLevel(company, 'expansion');
+  const bonusPerLevel = industry.mechanics.leverageMultiplierPerExpansionLevel ?? 0.03;
+  return 1 + expansionLevel * bonusPerLevel;
+}
+
+export function getIndustryVacancyMultiplier(
+  company: CompanyState,
+  industry: IndustryDefinition,
+): number {
+  if (industry.mechanics?.primaryBottleneck !== 'leverage') {
+    return 1;
+  }
+
+  const baseVacancy = industry.mechanics.baseVacancyRate ?? 0.1;
+  const expansionLevel = getTrackLevel(company, 'expansion');
+  const reduction =
+    expansionLevel * (industry.mechanics.vacancyReductionPerExpansionLevel ?? 0.012);
+  const occupancy = 1 - Math.max(0, baseVacancy - reduction);
+  return Math.max(0.72, Math.min(1, occupancy));
+}
+
+export function getIndustryLeverageInterestPerHourMinor(
+  company: CompanyState,
+  industry: IndustryDefinition,
+): number {
+  if (industry.mechanics?.primaryBottleneck !== 'leverage') {
+    return 0;
+  }
+
+  const expansionLevel = getTrackLevel(company, 'expansion');
+  if (expansionLevel <= 0) {
+    return 0;
+  }
+
+  const syntheticDebtMinor = industry.baseRevenuePerHourMinor * 10 * expansionLevel;
+  const rate = industry.mechanics.leverageInterestRateHourly ?? 0.000018;
+  return Math.round(syntheticDebtMinor * rate);
+}
+
 export function getIndustryInventoryCapMinor(
   company: CompanyState,
   industry: IndustryDefinition,
@@ -71,6 +118,8 @@ export function applyIndustryRevenueConstraints(
 
   let amountMinor = revenue.amountMinorUnits;
   amountMinor = Math.round(amountMinor * getIndustryRetentionMultiplier(company, industry));
+  amountMinor = Math.round(amountMinor * getIndustryVacancyMultiplier(company, industry));
+  amountMinor = Math.round(amountMinor * getIndustryLeverageRevenueMultiplier(company, industry));
 
   const capacityCap = getIndustryCapacityCapMinor(company, industry);
   if (capacityCap != null) {
@@ -106,6 +155,11 @@ export function describeIndustryBottleneck(
     case 'inventory': {
       const cap = getIndustryInventoryCapMinor(company, industry);
       return cap != null ? `inventory_cap_${cap}` : null;
+    }
+    case 'leverage': {
+      const occupancy = Math.round(getIndustryVacancyMultiplier(company, industry) * 100);
+      const interest = getIndustryLeverageInterestPerHourMinor(company, industry);
+      return `leverage_occupancy_${occupancy}_interest_${interest}`;
     }
     default:
       return null;

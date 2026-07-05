@@ -6,7 +6,7 @@ import {
   applyActivityEffect,
   getActivityRevenueMultiplier,
 } from '@/domain/companies/ActivityEffectService';
-import { getRevenuePerHour } from '@/domain/economy/EffectiveEconomyCalculator';
+import { getRevenuePerHour, getExpensesPerHour } from '@/domain/economy/EffectiveEconomyCalculator';
 import economyJson from '../../../../assets/config/economy_config_v1.json';
 
 const config = parseEconomyConfig(economyJson as never);
@@ -84,5 +84,40 @@ describe('Industry mechanics in effective economy', () => {
       1_000,
     );
     expect(revenue.amountMinorUnits).toBeLessThanOrEqual(65_000);
+  });
+
+  it('applies real estate vacancy and leverage interest from expansion track', () => {
+    const withExpansion = {
+      id: 're-1',
+      name: 'Properties',
+      companyKind: CompanyKinds.SUBSIDIARY,
+      industryId: 'real_estate',
+      level: 3,
+      cashBalance: MoneyValue.zero(),
+      reputation: 0,
+      automationLevel: 0,
+      automationPolicy: 'balanced' as const,
+      executiveContracts: {},
+      activeEffects: [],
+      integrationDebtMinor: 0,
+      integrationComplete: true,
+      lifetimeProfitMinor: 0,
+      employeeCount: 0,
+      payrollLevel: 1,
+      revenuePerHour: MoneyValue.fromMinor(145_000),
+      expensesPerHour: MoneyValue.fromMinor(60_000),
+      riskLevel: 0.15,
+      upgradeTrackLevels: { expansion: 2 },
+      createdAtUnix: 0,
+      updatedAtUnix: 0,
+    };
+    const withoutExpansion = { ...withExpansion, upgradeTrackLevels: {} };
+
+    const expandedRevenue = getRevenuePerHour(withExpansion, config, {}, [], 1_000).amountMinorUnits;
+    const baseRevenue = getRevenuePerHour(withoutExpansion, config, {}, [], 1_000).amountMinorUnits;
+    expect(expandedRevenue).toBeGreaterThan(baseRevenue);
+
+    const expenses = getExpensesPerHour(withExpansion, config, {}, 1_000).amountMinorUnits;
+    expect(expenses).toBeGreaterThan(60_000);
   });
 });

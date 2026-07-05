@@ -3,6 +3,7 @@ import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useGame } from '@/context/GameContext';
 import { interpolate, useTranslation } from '@/i18n';
+import { formatBottleneckHint } from '@/i18n/economyLabels';
 import { Screen } from '@/components/Screen';
 import { PrimaryButton } from '@/components/PrimaryButton';
 import { StatBox } from '@/components/StatBox';
@@ -157,6 +158,10 @@ export default function CompanyDetailScreen() {
         ? t.company.lifecycleGrowth
         : t.company.lifecycleMature;
 
+  const bottleneckLabel = company.bottleneckHint
+    ? formatBottleneckHint(company.bottleneckHint, t, formatMoneyCompact)
+    : null;
+
   const handlePolicyChange = (policy: typeof company.automationPolicy) => {
     if (!company.hasTaskAutomation) {
       return;
@@ -214,18 +219,19 @@ export default function CompanyDetailScreen() {
 
       <SectionHeader title={t.company.lifecycleTitle} subtitle={lifecycleLabel} />
 
-      {company.bottleneckHint ? (
-        <Text style={styles.healthMeta}>{company.bottleneckHint}</Text>
+      {bottleneckLabel ? (
+        <Text style={styles.preview}>{bottleneckLabel}</Text>
       ) : null}
 
       <SectionHeader
         title={t.company.economyBreakdownTitle}
         subtitle={t.company.economyBreakdownSubtitle}
       />
-      {company.economyBreakdown.slice(0, 6).map((line) => (
+      {company.economyBreakdown.slice(0, 8).map((line) => (
         <Text key={line.id} style={styles.healthMeta}>
-          {line.id}: {formatMoneyCompact(line.amountMinorPerHour)}
+          {line.label}: {formatMoneyCompact(Math.abs(line.amountMinorPerHour))}
           {t.common.perHour}
+          {line.amountMinorPerHour < 0 ? ' (−)' : line.kind === 'expense' ? '' : ''}
         </Text>
       ))}
 

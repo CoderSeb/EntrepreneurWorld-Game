@@ -1,5 +1,5 @@
 {
-  "version": 9,
+  "version": 10,
   "starting_cash_minor": 5000000,
   "holding_company_cost_minor": 2500000,
   "subsidiary_company_cost_minor": 2500000,
@@ -437,7 +437,14 @@
       "base_expenses_per_hour_minor": 60000,
       "risk_profile": 0.15,
       "automation_potential": 0.7,
-      "min_business_rank": 10
+      "min_business_rank": 10,
+      "industry_mechanics": {
+        "primary_bottleneck": "leverage",
+        "base_vacancy_rate": 0.11,
+        "vacancy_reduction_per_expansion_level": 0.015,
+        "leverage_interest_rate_hourly": 0.000018,
+        "leverage_multiplier_per_expansion_level": 0.035
+      }
     }
   ]
 }

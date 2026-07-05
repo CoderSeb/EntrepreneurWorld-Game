@@ -36,8 +36,9 @@ import {
 } from '@/domain/companies/ExecutivePolicyService';
 import {
   buildCompanyEconomyBreakdown,
-  EconomyBreakdownLine,
+  EconomyBreakdownLineUi,
 } from '@/domain/economy/EconomyBreakdownService';
+import { getEconomyBreakdownLabel } from '@/i18n/economyLabels';
 import {
   getMaxSystemsLevel,
   getNextSystemsUpgradeCostMinor,
@@ -86,7 +87,7 @@ export type CompanyUiModel = {
   maxEmployees: number;
   payrollLevel: number;
   marginalEmployeeProfitMinor: number;
-  economyBreakdown: EconomyBreakdownLine[];
+  economyBreakdown: EconomyBreakdownLineUi[];
   bottleneckHint: string | null;
   lifecyclePhase: CompanyLifecyclePhase;
   automationPolicy: ExecutiveAutomationPolicy;
@@ -204,7 +205,10 @@ export function buildCompanyUiModel(
       company.payrollLevel,
       company.level,
     ),
-    economyBreakdown: economyBreakdown.lines,
+    economyBreakdown: economyBreakdown.lines.map((line) => ({
+      ...line,
+      label: translations ? getEconomyBreakdownLabel(line.id, translations) : line.id,
+    })),
     bottleneckHint: describeIndustryBottleneck(company, config),
     lifecyclePhase: getCompanyLifecyclePhase(company),
     automationPolicy: company.automationPolicy,

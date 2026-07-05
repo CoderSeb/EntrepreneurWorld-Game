@@ -62,6 +62,25 @@ describe('SaveMigrationService', () => {
     expect(saveData.player.personalCashBalance.amountMinorUnits).toBe(0);
     expect(saveData.companies[0]?.cashBalance.amountMinorUnits).toBe(1_050_000);
   });
+
+  it('migrates schema 9 to v10 executive policy and integration fields', () => {
+    const migrated = migrateSavePayload({
+      schema_version: 9,
+      state: {
+        companies: [{ id: 'c1', active_effects: [] }],
+        market: { active_events: [] },
+      },
+    });
+
+    expect(migrated.schema_version).toBe(CURRENT_SCHEMA_VERSION);
+    const company = ((migrated.state as Record<string, unknown>).companies as Record<string, unknown>[])[0];
+    expect(company.automation_policy).toBe('balanced');
+    expect(company.integration_debt_minor).toBe(0);
+    expect(company.integration_complete).toBe(true);
+
+    const market = (migrated.state as Record<string, unknown>).market as Record<string, unknown>;
+    expect(market.market_signals).toEqual([]);
+  });
 });
 
 describe('SaveIntegrityService', () => {

@@ -12,8 +12,17 @@ import {
 import {
   applyIndustryRevenueConstraints,
   getIndustryCapacityCapMinor,
+  getIndustryInventoryCapMinor,
+  getIndustryLeverageInterestPerHourMinor,
+  getIndustryLeverageRevenueMultiplier,
   getIndustryRetentionMultiplier,
+  getIndustryVacancyMultiplier,
 } from '@/domain/companies/IndustryMechanicsService';
+import {
+  getPolicyExpenseMultiplier,
+  getPolicyRevenueMultiplier,
+} from '@/domain/companies/ExecutivePolicyService';
+import { getIntegrationDebtExpensePerHourMinor } from '@/domain/companies/AcquisitionService';
 import { getExecutiveSalaryMinor, isExecutiveHired } from '@/domain/companies/ExecutiveContracts';
 import { getTrackLevel } from '@/domain/companies/UpgradeTrackService';
 import {
@@ -33,6 +42,10 @@ export type EconomyBreakdownLine = {
   id: string;
   amountMinorPerHour: number;
   kind: 'revenue' | 'expense';
+};
+
+export type EconomyBreakdownLineUi = EconomyBreakdownLine & {
+  label: string;
 };
 
 export type CompanyEconomyBreakdown = {
@@ -117,12 +130,34 @@ export function buildCompanyEconomyBreakdown(
     revenueMinor = Math.round(revenueMinor * activityRevenueMultiplier);
   }
 
+  const policyRevenueMultiplier = getPolicyRevenueMultiplier(company, config, nowUnix);
+  if (policyRevenueMultiplier !== 1) {
+    const delta = Math.round(revenueMinor * (policyRevenueMultiplier - 1));
+    lines.push({ id: 'policy_revenue', amountMinorPerHour: delta, kind: 'revenue' });
+    revenueMinor = Math.round(revenueMinor * policyRevenueMultiplier);
+  }
+
   if (industry?.mechanics?.primaryBottleneck === 'retention') {
     const retention = getIndustryRetentionMultiplier(company, industry);
     if (retention !== 1) {
       const delta = Math.round(revenueMinor * (retention - 1));
       lines.push({ id: 'retention_revenue', amountMinorPerHour: delta, kind: 'revenue' });
       revenueMinor = Math.round(revenueMinor * retention);
+    }
+  }
+
+  if (industry?.mechanics?.primaryBottleneck === 'leverage') {
+    const vacancy = getIndustryVacancyMultiplier(company, industry);
+    if (vacancy !== 1) {
+      const delta = Math.round(revenueMinor * (vacancy - 1));
+      lines.push({ id: 'vacancy_revenue', amountMinorPerHour: delta, kind: 'revenue' });
+      revenueMinor = Math.round(revenueMinor * vacancy);
+    }
+    const leverage = getIndustryLeverageRevenueMultiplier(company, industry);
+    if (leverage !== 1) {
+      const delta = Math.round(revenueMinor * (leverage - 1));
+      lines.push({ id: 'leverage_revenue', amountMinorPerHour: delta, kind: 'revenue' });
+      revenueMinor = Math.round(revenueMinor * leverage);
     }
   }
 
@@ -138,6 +173,14 @@ export function buildCompanyEconomyBreakdown(
       lines.push({
         id: 'capacity_cap_revenue',
         amountMinorPerHour: capacityCap - beforeCapacity,
+        kind: 'revenue',
+      });
+    }
+    const inventoryCap = getIndustryInventoryCapMinor(company, industry);
+    if (inventoryCap != null && revenueMinor > inventoryCap) {
+      lines.push({
+        id: 'inventory_cap_revenue',
+        amountMinorPerHour: inventoryCap - revenueMinor,
         kind: 'revenue',
       });
     }
@@ -195,6 +238,27 @@ export function buildCompanyEconomyBreakdown(
     const delta = Math.round(expenseMinor * (activityExpenseMultiplier - 1));
     lines.push({ id: 'activity_expenses', amountMinorPerHour: delta, kind: 'expense' });
     expenseMinor = Math.round(expenseMinor * activityExpenseMultiplier);
+  }
+
+  const policyExpenseMultiplier = getPolicyExpenseMultiplier(company, config, nowUnix);
+  if (policyExpenseMultiplier !== 1) {
+    const delta = Math.round(expenseMinor * (policyExpenseMultiplier - 1));
+    lines.push({ id: 'policy_expenses', amountMinorPerHour: delta, kind: 'expense' });
+    expenseMinor = Math.round(expenseMinor * policyExpenseMultiplier);
+  }
+
+  if (industry) {
+    const leverageInterest = getIndustryLeverageInterestPerHourMinor(company, industry);
+    if (leverageInterest > 0) {
+      lines.push({ id: 'leverage_interest', amountMinorPerHour: leverageInterest, kind: 'expense' });
+      expenseMinor += leverageInterest;
+    }
+  }
+
+  const integrationDebt = getIntegrationDebtExpensePerHourMinor(company);
+  if (integrationDebt > 0) {
+    lines.push({ id: 'integration_debt', amountMinorPerHour: integrationDebt, kind: 'expense' });
+    expenseMinor += integrationDebt;
   }
 
   const actualNet = getRevenuePerHour(company, config, marketState, subsidiaries, nowUnix)

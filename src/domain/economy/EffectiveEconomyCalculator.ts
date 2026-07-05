@@ -14,7 +14,9 @@ import {
   getActivityExpenseMultiplier,
   getActivityRevenueMultiplier,
 } from '@/domain/companies/ActivityEffectService';
-import { applyIndustryRevenueConstraints } from '@/domain/companies/IndustryMechanicsService';
+import { applyIndustryRevenueConstraints,
+  getIndustryLeverageInterestPerHourMinor,
+} from '@/domain/companies/IndustryMechanicsService';
 import {
   employeePayrollPerHourMinor,
   employeeRevenuePerHourMinor,
@@ -85,6 +87,12 @@ export function getExpensesPerHour(
   expenses = expenses.multiplyScalar(getExpenseMultiplier(marketState, company.industryId));
   expenses = expenses.multiplyScalar(getActivityExpenseMultiplier(company, nowUnix));
   expenses = expenses.multiplyScalar(getPolicyExpenseMultiplier(company, config, nowUnix));
+  const industry = getIndustry(config, company.industryId);
+  if (industry) {
+    expenses = expenses.add(
+      MoneyValue.fromMinor(getIndustryLeverageInterestPerHourMinor(company, industry)),
+    );
+  }
   expenses = expenses.add(MoneyValue.fromMinor(getIntegrationDebtExpensePerHourMinor(company)));
   return expenses;
 }
