@@ -6,6 +6,8 @@ import {
   getExecutiveSalaryMinor,
   isExecutiveHired,
 } from '@/domain/companies/ExecutiveContracts';
+import { getExecutiveDescription, getExecutiveTitle } from '@/i18n/configLabels';
+import type { TranslationDictionary } from '@/i18n/types';
 
 export type ExecutiveRoleUiModel = {
   roleId: string;
@@ -31,6 +33,7 @@ export function buildExecutiveRoleUiModels(
   company: CompanyState,
   config: EconomyConfig,
   nowUnix: number,
+  translations?: TranslationDictionary,
 ): ExecutiveRoleUiModel[] {
   return config.managers
     .filter((role) => role.appliesTo === company.companyKind)
@@ -39,8 +42,8 @@ export function buildExecutiveRoleUiModels(
       const hired = isExecutiveHired(company, role.id, nowUnix);
       return {
         roleId: role.id,
-        title: role.displayName,
-        description: role.description,
+        title: translations ? getExecutiveTitle(role.id, translations) : role.displayName,
+        description: translations ? getExecutiveDescription(role.id, translations) : role.description,
         hireCostMinor: getExecutiveHireCostMinor(company, role),
         salaryMinor: getExecutiveSalaryMinor(company, role),
         revenueBoostPercent: Math.round((role.revenueMultiplier - 1) * 100),

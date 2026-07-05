@@ -19,6 +19,7 @@ import { getIndustry, getIndustryFoundingCost, getUpgradeTrack } from '@/domain/
 import { getUnlockedIndustries } from '@/domain/progression/ProgressionService';
 
 import { getIndustryLabel } from '@/i18n/industryLabels';
+import { getTrackLabel } from '@/i18n/configLabels';
 
 import { colors, spacing } from '@/theme/tokens';
 
@@ -241,12 +242,8 @@ export function FoundCompanyForm() {
                     margin: selectedPresentation.marginPercent,
 
                     track:
-
-                      getUpgradeTrack(config, selectedIndustry.preferredTrackId ?? '')?.displayName ??
-
-                      selectedIndustry.preferredTrackId ??
-
-                      '—',
+                      getTrackLabel(selectedIndustry.preferredTrackId ?? '', t) ||
+                      (selectedIndustry.preferredTrackId ?? '—'),
 
                   })}
 

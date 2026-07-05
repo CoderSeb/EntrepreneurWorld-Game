@@ -15,6 +15,7 @@ import {
   effectiveLoanTerms,
   formatAnnualRatePercent,
 } from '@/domain/companies/LoanPricingService';
+import { getLoanProductLabel } from '@/i18n/configLabels';
 import { DisplayCurrencyCode } from '@/domain/money/MoneyFormatter';
 import { SupportedLocale } from '@/i18n/locales';
 import { colors, spacing } from '@/theme/tokens';
@@ -40,6 +41,7 @@ export default function ExecScreen() {
     syncCloudNow,
     deleteAccount,
     reconnectBackend,
+    lastSaveError,
     displayCurrency,
     setDisplayCurrency,
     locale,
@@ -209,7 +211,7 @@ export default function ExecScreen() {
             const terms = effectiveLoanTerms(product, rank);
             return (
               <View key={product.id} style={styles.loanOffer}>
-                <Text style={styles.loanTitle}>{product.displayName}</Text>
+                <Text style={styles.loanTitle}>{getLoanProductLabel(product.id, t)}</Text>
                 <Text style={styles.loanMeta}>
                   {interpolate(t.exec.loanOfferMeta, {
                     amount: formatMoneyCompact(terms.maxAmountMinor),
@@ -259,6 +261,7 @@ export default function ExecScreen() {
       <Text style={styles.tipText}>{t.exec.tipBody}</Text>
 
       <SectionHeader title={t.exec.localSaveTitle} subtitle={t.exec.localSaveSubtitle} />
+      {lastSaveError ? <Text style={styles.backendError}>{t.exec.saveFailed}</Text> : null}
       <Pressable onPress={() => saveNow()} style={styles.settingRow}>
         <View>
           <Text style={styles.settingLabel}>{t.common.saveNow}</Text>

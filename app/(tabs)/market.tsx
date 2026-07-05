@@ -6,6 +6,7 @@ import { GlowBadge } from '@/components/GlowBadge';
 import { SectionHeader } from '@/components/SectionHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { LeaderboardSection } from '@/components/LeaderboardSection';
+import { getMarketEventLabel } from '@/i18n/configLabels';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
@@ -72,7 +73,7 @@ export default function MarketScreen() {
                 {interpolate(t.market.hoursShort, { hours: event.remainingHours.toFixed(0) })}
               </Text>
               <View style={styles.eventBody}>
-                <Text style={styles.headline}>{event.displayName}</Text>
+                <Text style={styles.headline}>{getMarketEventLabel(event.id, t)}</Text>
                 <Text style={styles.eventMeta}>
                   {interpolate(t.market.eventMeta, {
                     revenue: event.revenueMultiplier.toFixed(2),

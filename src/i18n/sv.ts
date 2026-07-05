@@ -63,6 +63,41 @@ export const sv: TranslationDictionary = {
     software: 'Programmeringsfirma',
     real_estate: 'Fastigheter',
   },
+  configLabels: {
+    executives: {
+      ceo: { title: 'VD', description: 'Styr strategi och automatiserar operativa uppgifter.' },
+      cfo: { title: 'CFO', description: 'Optimerar ekonomi och sänker driftskostnader.' },
+      cmo: { title: 'CMO', description: 'Driver marknadstillväxt och varumärkesräckvidd.' },
+      hr_manager: { title: 'HR-chef', description: 'Förbättrar retention och minskar HR-overhead.' },
+      coo: { title: 'COO', description: 'Driver daglig drift och automatiserar arbetsflöden.' },
+    },
+    tracks: {
+      operations: 'Drift',
+      marketing: 'Marknadsföring',
+      staff: 'Personal',
+      quality: 'Kvalitet',
+      expansion: 'Expansion',
+    },
+    activities: {
+      serve_customers: 'Betjäna kunder',
+      optimize_workflow: 'Optimera arbetsflöde',
+      launch_campaign: 'Starta kampanj',
+    },
+    marketEvents: {
+      local_boom: 'Lokal boom',
+      staff_shortage: 'Personalbrist',
+      supplier_discount: 'Leverantörsrabatt',
+      energy_price_spike: 'Energiprischock',
+      tax_rule_change: 'Skatteregeländring',
+      viral_campaign: 'Viralkampanj',
+      ai_boom: 'AI-boom',
+      real_estate_boom: 'Fastighetsboom',
+    },
+    loans: {
+      starter_loan: 'Startlån',
+      growth_loan: 'Tillväxtlån',
+    },
+  },
   onboarding: {
     welcomeKicker: 'VÄLKOMMEN TILL',
     title: 'ENTREPRENEUR\nWORLD',
@@ -158,7 +193,7 @@ export const sv: TranslationDictionary = {
     displayCurrencyTitle: 'Visningsvaluta',
     displayCurrencySubtitle: 'Endast visning — simuleringen använder USD i minor units',
     languageTitle: 'Språk',
-    languageSubtitle: 'UI-text — ekonomikonfigurationen är på engelska tills vidare',
+    languageSubtitle: 'UI och speltermer följer valt språk',
     tipTitle: 'Tips',
     tipSubtitle: 'Bolagsledning',
     tipBody:
@@ -166,6 +201,7 @@ export const sv: TranslationDictionary = {
     localSaveTitle: 'Lokal lagring',
     localSaveSubtitle: 'Manuell sparning',
     saveHint: 'Skriver lokal save och synkar moln när ansluten',
+    saveFailed: 'Senaste sparningen misslyckades — tryck Spara nu för att försöka igen',
     cloudSyncAction: 'Molnsynk',
     accountDeletionAction: 'Kontoradering',
     reconnect: 'Försök igen',

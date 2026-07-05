@@ -61,6 +61,41 @@ export const en = {
     software: 'Software agency',
     real_estate: 'Real estate',
   },
+  configLabels: {
+    executives: {
+      ceo: { title: 'CEO', description: 'Leads strategy and automates operational tasks.' },
+      cfo: { title: 'CFO', description: 'Optimizes finances and lowers operating costs.' },
+      cmo: { title: 'CMO', description: 'Drives marketing growth and brand reach.' },
+      hr_manager: { title: 'HR Manager', description: 'Improves retention and reduces HR overhead.' },
+      coo: { title: 'COO', description: 'Runs daily operations and automates workflows.' },
+    },
+    tracks: {
+      operations: 'Operations',
+      marketing: 'Marketing',
+      staff: 'Staff',
+      quality: 'Quality',
+      expansion: 'Expansion',
+    },
+    activities: {
+      serve_customers: 'Serve customers',
+      optimize_workflow: 'Optimize workflow',
+      launch_campaign: 'Launch campaign',
+    },
+    marketEvents: {
+      local_boom: 'Local boom',
+      staff_shortage: 'Staff shortage',
+      supplier_discount: 'Supplier discount',
+      energy_price_spike: 'Energy price spike',
+      tax_rule_change: 'Tax rule change',
+      viral_campaign: 'Viral campaign',
+      ai_boom: 'AI boom',
+      real_estate_boom: 'Real estate boom',
+    },
+    loans: {
+      starter_loan: 'Starter loan',
+      growth_loan: 'Growth loan',
+    },
+  },
   onboarding: {
     welcomeKicker: 'WELCOME TO',
     title: 'ENTREPRENEUR\nWORLD',
@@ -156,7 +191,7 @@ export const en = {
     displayCurrencyTitle: 'Display currency',
     displayCurrencySubtitle: 'Display only — simulation stays in USD minor units',
     languageTitle: 'Language',
-    languageSubtitle: 'UI text — economy config stays in English for now',
+    languageSubtitle: 'UI and in-game terms follow your selected language',
     tipTitle: 'Tip',
     tipSubtitle: 'Company leadership',
     tipBody:
@@ -164,6 +199,7 @@ export const en = {
     localSaveTitle: 'Local save',
     localSaveSubtitle: 'Manual persistence',
     saveHint: 'Writes local save and syncs cloud when connected',
+    saveFailed: 'Last save failed — tap Save now to retry',
     cloudSyncAction: 'Cloud sync',
     accountDeletionAction: 'Account deletion',
     reconnect: 'Retry connection',

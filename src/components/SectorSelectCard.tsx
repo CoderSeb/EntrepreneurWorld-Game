@@ -1,8 +1,9 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { EconomyConfig, getIndustryFoundingCost, getUpgradeTrack, IndustryDefinition } from '@/domain/config/EconomyConfig';
+import { EconomyConfig, getIndustryFoundingCost, IndustryDefinition } from '@/domain/config/EconomyConfig';
 import { resolveIndustryPresentation } from '@/domain/config/IndustryPresentation';
 import { getIndustryLabel } from '@/i18n/industryLabels';
+import { getTrackLabel } from '@/i18n/configLabels';
 import { useTranslation } from '@/i18n';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
@@ -26,8 +27,8 @@ export function SectorSelectCard({
   const presentation = resolveIndustryPresentation(industry);
   const iconName = presentation.iconName as keyof typeof Ionicons.glyphMap;
   const trackName =
-    getUpgradeTrack(config, industry.preferredTrackId ?? '')?.displayName ??
-    industry.preferredTrackId ??
+    getTrackLabel(industry.preferredTrackId ?? '', t) ||
+    industry.preferredTrackId ||
     '—';
   const foundingCost = getIndustryFoundingCost(industry, config);
 

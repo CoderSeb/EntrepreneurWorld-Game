@@ -102,6 +102,7 @@ type GameContextValue = {
   config: EconomyConfig;
   backendStatus: BackendStatus;
   lastSimTickMs: number;
+  lastSaveError: string | null;
   dashboard: ReturnType<typeof buildDashboardViewModel>;
   market: ReturnType<typeof buildMarketViewModel>;
   companies: ReturnType<typeof buildCompanyUiModels>;
@@ -163,6 +164,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [backendStatus, setBackendStatus] = useState<BackendStatus>(createInitialBackendStatus);
   const [offlineSummary, setOfflineSummary] = useState<OfflineSummary | null>(null);
   const [lastSimTickMs, setLastSimTickMs] = useState(() => Date.now());
+  const [lastSaveError, setLastSaveError] = useState<string | null>(null);
   const [displayCurrency, setDisplayCurrencyState] = useState<DisplayCurrencyCode>('USD');
   const [locale, setLocaleState] = useState<SupportedLocale>('en');
   const appStateRef = useRef<AppState>(createFreshAppState(nowUnix()));
@@ -191,7 +193,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const persistGame = useCallback(async () => {
     const result = await saveGame(appStateRef.current, config, nowUnix());
     if (result.success) {
+      setLastSaveError(null);
       await syncToCloud(result.data);
+    } else {
+      setLastSaveError(result.errorMessage);
     }
     return result;
   }, [config, syncToCloud]);
@@ -366,10 +371,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       config,
       backendStatus,
       lastSimTickMs,
+      lastSaveError,
       dashboard,
       market: buildMarketViewModel(state, now),
       companies,
-      tasks: buildTaskUiModels(state, config, now),
+      tasks: buildTaskUiModels(state, config, now, strings),
       offlineSummary,
       dismissOfflineSummary: () => setOfflineSummary(null),
       completeOnboarding: (holdingName, companyName, industryId) =>
@@ -400,7 +406,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
         mutate(() => adjustEmployeeCount(state, companyId, delta, nowUnix())),
       setCompanyPayrollLevel: (companyId, payrollLevel) =>
         mutate(() => setPayrollLevel(state, companyId, payrollLevel, nowUnix())),
-      getCompanyExecutiveRoles: (companyId) => buildCompanyExecutiveRoles(state, config, companyId, now),
+      getCompanyExecutiveRoles: (companyId) =>
+        buildCompanyExecutiveRoles(state, config, companyId, now, strings),
       upgradeCompanyTrack: (companyId, trackId) =>
         mutate(() => upgradeTrack(state, companyId, trackId, config, now)),
       upgradeCompanyAutomation: (companyId) =>
@@ -515,7 +522,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       formatMoneyCompact: (minorUnits: number) => formatMoneyCompact(minorUnits, displayCurrency),
       formatMoney: (minorUnits: number) => formatMoney(minorUnits, displayCurrency),
     };
-  }, [tick, ready, config, backendStatus, lastSimTickMs, offlineSummary, mutate, persistGame, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
+  }, [tick, ready, config, backendStatus, lastSimTickMs, lastSaveError, offlineSummary, mutate, persistGame, displayCurrency, setDisplayCurrency, locale, setLocale, strings]);
 
   useEffect(() => {
     if (ready) {
