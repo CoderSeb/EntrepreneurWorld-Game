@@ -29,7 +29,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 
 export function FoundCompanyForm() {
 
-  const { config, dashboard, companies, availableFoundingCashMinor, foundSubsidiary, formatMoneyCompact } = useGame();
+  const { config, dashboard, companies, foundingFunding, foundSubsidiary, formatMoneyCompact } = useGame();
 
   const { t } = useTranslation();
 
@@ -61,11 +61,12 @@ export function FoundCompanyForm() {
 
     : config.subsidiaryCompanyCostMinor;
 
-  const canAfford = availableFoundingCashMinor >= foundingCost;
-
+  const canAfford = foundingFunding.totalMinor >= foundingCost;
   const trimmedName = companyName.trim();
-
-  const canSubmit = Boolean(industryId) && trimmedName.length >= 2 && canAfford;
+  const hasValidName = trimmedName.length >= 2;
+  const canSubmit = Boolean(industryId) && hasValidName && canAfford;
+  const remainingAfterFounding = foundingFunding.totalMinor - foundingCost;
+  const shortfallMinor = Math.max(0, foundingCost - foundingFunding.totalMinor);
 
   const selectedPresentation = selectedIndustry ? resolveIndustryPresentation(selectedIndustry) : null;
 
@@ -161,16 +162,45 @@ export function FoundCompanyForm() {
 
           </View>
 
+          <Card accentColor={canAfford ? colors.success : colors.warning} style={styles.fundingCard}>
+            <Text style={styles.fundingTitle}>{t.foundCompany.fundingTitle}</Text>
+            <View style={styles.fundingRow}>
+              <Text style={styles.fundingLabel}>{t.foundCompany.fundingHolding}</Text>
+              <Text style={styles.fundingValue}>{formatMoneyCompact(foundingFunding.holdingMinor)}</Text>
+            </View>
+            <View style={styles.fundingRow}>
+              <Text style={styles.fundingLabel}>{t.foundCompany.fundingCompanies}</Text>
+              <Text style={styles.fundingValue}>{formatMoneyCompact(foundingFunding.subsidiaryMinor)}</Text>
+            </View>
+            <View style={styles.fundingRow}>
+              <Text style={styles.fundingLabel}>{t.foundCompany.fundingPersonal}</Text>
+              <Text style={styles.fundingValue}>{formatMoneyCompact(foundingFunding.personalMinor)}</Text>
+            </View>
+            <View style={[styles.fundingRow, styles.fundingTotalRow]}>
+              <Text style={styles.fundingTotalLabel}>{t.foundCompany.fundingTotal}</Text>
+              <Text style={[styles.fundingTotalValue, canAfford ? styles.positive : styles.negative]}>
+                {formatMoneyCompact(foundingFunding.totalMinor)}
+              </Text>
+            </View>
+            {selectedIndustry ? (
+              <View style={styles.fundingRow}>
+                <Text style={styles.fundingLabel}>{t.foundCompany.fundingAfter}</Text>
+                <Text style={[styles.fundingValue, canAfford ? styles.positive : styles.negative]}>
+                  {canAfford
+                    ? formatMoneyCompact(remainingAfterFounding)
+                    : interpolate(t.foundCompany.fundingShortfall, {
+                        amount: formatMoneyCompact(shortfallMinor),
+                      })}
+                </Text>
+              </View>
+            ) : null}
+          </Card>
+
           <Text style={styles.hint}>
-
             {interpolate(t.foundCompany.hint, {
-
               cost: formatMoneyCompact(foundingCost),
-
-              cash: formatMoneyCompact(availableFoundingCashMinor),
-
+              cash: formatMoneyCompact(foundingFunding.totalMinor),
             })}
-
           </Text>
 
 
@@ -321,18 +351,16 @@ export function FoundCompanyForm() {
 
           />
 
+          {!hasValidName ? (
+            <Text style={styles.warning}>{t.foundCompany.needCompanyName}</Text>
+          ) : null}
+
           {!canAfford ? (
-
             <Text style={styles.warning}>
-
               {interpolate(t.foundCompany.needMoreCash, {
-
-                amount: formatMoneyCompact(foundingCost - availableFoundingCashMinor),
-
+                amount: formatMoneyCompact(shortfallMinor),
               })}
-
             </Text>
-
           ) : null}
 
         </View>
@@ -438,7 +466,27 @@ const styles = StyleSheet.create({
   compare: { fontFamily: fonts.body, fontSize: fontSizes.sm, color: colors.textSecondary, lineHeight: 18 },
 
   warning: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.warning, textAlign: 'center' },
-
+  fundingCard: { gap: spacing.xs },
+  fundingTitle: {
+    fontFamily: fonts.mono,
+    fontSize: fontSizes.xs,
+    color: colors.muted,
+    letterSpacing: 1,
+    marginBottom: spacing.xs,
+  },
+  fundingRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  fundingLabel: { fontFamily: fonts.body, fontSize: fontSizes.sm, color: colors.textSecondary },
+  fundingValue: { fontFamily: fonts.mono, fontSize: fontSizes.sm, color: colors.text },
+  fundingTotalRow: {
+    marginTop: spacing.xs,
+    paddingTop: spacing.xs,
+    borderTopWidth: 1,
+    borderTopColor: `${colors.primary}18`,
+  },
+  fundingTotalLabel: { fontFamily: fonts.display, fontSize: fontSizes.sm, color: colors.text, fontWeight: '700' },
+  fundingTotalValue: { fontFamily: fonts.mono, fontSize: fontSizes.md, fontWeight: '700' },
+  positive: { color: colors.success },
+  negative: { color: colors.danger },
 });
 
 

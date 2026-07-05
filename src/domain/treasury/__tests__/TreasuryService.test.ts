@@ -5,6 +5,10 @@ import { MoneyValue } from '@/domain/money/MoneyValue';
 import { parseEconomyConfig } from '@/domain/config/EconomyConfig';
 import { applyCompanyIncomeForHours } from '@/domain/economy/CompanyIncomeService';
 import {
+  getFoundingFundingBreakdown,
+  tryPayForConglomerateInvestment,
+} from '@/domain/treasury/CompanyTreasury';
+import {
   calculateSalaryPreview,
   transferDividendToHolding,
   withdrawSalaryFromHolding,
@@ -89,5 +93,22 @@ describe('CompanyIncomeService', () => {
     const net = applyCompanyIncomeForHours(state.companies, 1, config, state.marketState);
     expect(net.amountMinorUnits).not.toBe(0);
     expect(subsidiary.cashBalance.amountMinorUnits).toBeGreaterThan(before);
+  });
+});
+
+describe('Conglomerate investment funding', () => {
+  it('includes subsidiary cash in founding pool', () => {
+    const state = createTestState();
+    const breakdown = getFoundingFundingBreakdown(state);
+    expect(breakdown.subsidiaryMinor).toBe(300_000);
+    expect(breakdown.totalMinor).toBe(500_000 + 300_000 + 1_000_000);
+  });
+
+  it('pays founding cost from subsidiary cash when holding is empty', () => {
+    const state = createTestState();
+    state.companies.find((c) => c.id === 'holding-1')!.cashBalance = MoneyValue.zero();
+    const paid = tryPayForConglomerateInvestment(state, 420_000);
+    expect(paid).toBe(true);
+    expect(state.companies.find((c) => c.id === 'sub-1')?.cashBalance.amountMinorUnits).toBe(0);
   });
 });

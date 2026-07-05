@@ -64,7 +64,7 @@ import {
   transferDividendToHolding,
   withdrawSalaryFromHolding,
 } from '@/domain/treasury/TreasuryService';
-import { availableFundingForFoundingMinor, availableFundingForSubsidiaryMinor } from '@/domain/treasury/CompanyTreasury';
+import { availableFundingForFoundingMinor, availableFundingForSubsidiaryMinor, getFoundingFundingBreakdown } from '@/domain/treasury/CompanyTreasury';
 import {
   DISPLAY_CURRENCY_SETTING_KEY,
   DisplayCurrencyCode,
@@ -147,6 +147,7 @@ type GameContextValue = {
   conglomerateLiquidCashMinor: number;
   availableCompanyFundingMinor: (companyId: string) => number;
   availableFoundingCashMinor: number;
+  foundingFunding: ReturnType<typeof getFoundingFundingBreakdown>;
   displayCurrency: DisplayCurrencyCode;
   setDisplayCurrency: (currency: DisplayCurrencyCode) => void;
   locale: SupportedLocale;
@@ -542,6 +543,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return availableFundingForSubsidiaryMinor(state, company);
       },
       availableFoundingCashMinor: availableFundingForFoundingMinor(state),
+      foundingFunding: getFoundingFundingBreakdown(state),
       displayCurrency,
       setDisplayCurrency,
       locale,

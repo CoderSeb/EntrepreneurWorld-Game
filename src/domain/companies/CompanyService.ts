@@ -21,10 +21,8 @@ import {
   isIndustryUnlocked,
 } from '@/domain/progression/ProgressionService';
 import {
-  availableFundingForFoundingMinor,
-  findHoldingCompany,
   tryDeductForSubsidiaryExpense,
-  tryDeductFromHolding,
+  tryPayForConglomerateInvestment,
   tryDeductFromPersonal,
 } from '@/domain/treasury/CompanyTreasury';
 
@@ -90,11 +88,11 @@ export function createSubsidiaryCompany(
   }
 
   const cost = MoneyValue.fromMinor(getIndustryFoundingCost(industry, config));
-  const holding = findHoldingCompany(appState);
-  if (holding && tryDeductFromHolding(appState, cost.amountMinorUnits)) {
-    // Paid from holding treasury.
-  } else if (!tryDeductFromPersonal(appState.player, cost.amountMinorUnits)) {
-    return fail('insufficient_funds', 'Not enough cash in holding or personal wallet');
+  if (!tryPayForConglomerateInvestment(appState, cost.amountMinorUnits)) {
+    return fail(
+      'insufficient_funds',
+      'Not enough cash across holding, subsidiaries, and personal wallet',
+    );
   }
 
   const company = createSubsidiary(industry, trimmedName, nowUnix);
