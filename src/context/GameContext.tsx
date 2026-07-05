@@ -61,6 +61,7 @@ import {
 import { AuthSession, clearAuthSession } from '@/services/auth/authSessionStore';
 import {
   calculateSalaryPreview,
+  SalaryPreview,
   transferDividendToHolding,
   withdrawSalaryFromHolding,
 } from '@/domain/treasury/TreasuryService';
@@ -127,7 +128,7 @@ type GameContextValue = {
   borrowLoan: (productId: string, amountMinor: number) => OperationResult;
   repayLoanById: (loanId: string) => OperationResult;
   transferDividend: (subsidiaryId: string, amountMinor: number) => OperationResult;
-  withdrawSalary: (grossMinor: number) => OperationResult;
+  withdrawSalary: (grossMinor: number) => OperationResult<SalaryPreview>;
   previewSalary: (grossMinor: number) => ReturnType<typeof calculateSalaryPreview>;
   saveNow: () => Promise<void>;
   syncCloudNow: () => Promise<SyncResult>;
@@ -254,7 +255,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (offlineSeconds >= OFFLINE_THRESHOLD_SECONDS) {
       if (hasIncomeCompaniesRef.current) {
         const result = simulateOfflineForApp(state, offlineSeconds, activeConfig);
-        processCompanyProgression(state, activeConfig, offlineSeconds, now);
+        const progressionSeconds = Math.max(0, Math.round(result.effectiveHours * 3600));
+        processCompanyProgression(state, activeConfig, progressionSeconds, now);
         setOfflineSummary({ result, offlineSeconds });
       }
       accrueLoanInterest(state, offlineSeconds);
@@ -431,8 +433,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
       repayLoanById: (loanId) => mutate(() => repayLoan(state, loanId)),
       transferDividend: (subsidiaryId, amountMinor) =>
         mutate(() => transferDividendToHolding(state, subsidiaryId, amountMinor, now, config)),
-      withdrawSalary: (grossMinor) =>
-        mutate(() => withdrawSalaryFromHolding(state, grossMinor, config, now)),
+      withdrawSalary: (grossMinor) => {
+        const result = withdrawSalaryFromHolding(state, grossMinor, config, now);
+        if (result.success) {
+          bump();
+          persistGame().catch(() => undefined);
+        }
+        return result;
+      },
       previewSalary: (grossMinor) => calculateSalaryPreview(grossMinor, config),
       saveNow: async () => {
         await persistGame();

@@ -79,7 +79,10 @@ describe('TreasuryService', () => {
     const preview = calculateSalaryPreview(100_000, config);
     const result = withdrawSalaryFromHolding(state, 100_000, config, 200);
     expect(result.success).toBe(true);
-    expect(result.data?.netMinor).toBe(preview.netMinor);
+    if (!result.success) {
+      return;
+    }
+    expect(result.data.netMinor).toBe(preview.netMinor);
     expect(state.player.personalCashBalance.amountMinorUnits).toBe(1_000_000 + preview.netMinor);
     expect(state.companies.find((c) => c.id === 'holding-1')?.cashBalance.amountMinorUnits).toBe(400_000);
   });

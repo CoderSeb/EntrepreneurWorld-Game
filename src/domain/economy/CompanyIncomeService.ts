@@ -23,9 +23,6 @@ export function applyCompanyIncomeForHours(
     const expenses = getExpensesPerHour(company, config, marketState).multiplyScalar(hours);
     const net = revenue.subtract(expenses);
     company.cashBalance = company.cashBalance.add(net);
-    if (net.amountMinorUnits > 0) {
-      company.lifetimeProfitMinor += net.amountMinorUnits;
-    }
     totalNet = totalNet.add(net);
   }
 

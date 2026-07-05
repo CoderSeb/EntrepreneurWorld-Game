@@ -1,4 +1,4 @@
-import { EconomyConfig, getActivitiesForKind, getIndustry, getManager } from '@/domain/config/EconomyConfig';
+import { EconomyConfig, getActivitiesForKind, getIndustry } from '@/domain/config/EconomyConfig';
 import { AppState } from '@/domain/core/AppState';
 import { CompanyState, isHolding } from '@/domain/core/CompanyState';
 import { applyLevelUpgrade } from '@/domain/economy/UpgradeCalculator';
@@ -34,6 +34,55 @@ export function countAutomatedActivityRuns(
   };
 }
 
+export function buildAutomationPeriodSegments(
+  company: CompanyState,
+  config: EconomyConfig,
+  periodStartUnix: number,
+  periodEndUnix: number,
+): Array<{ startUnix: number; endUnix: number }> {
+  if (periodEndUnix <= periodStartUnix) {
+    return [];
+  }
+
+  const boundaries = new Set<number>([periodStartUnix, periodEndUnix]);
+  for (const role of config.managers) {
+    if (!role.automatesTasks || role.appliesTo !== company.companyKind) {
+      continue;
+    }
+
+    const contract = company.executiveContracts[role.id];
+    if (!contract) {
+      continue;
+    }
+
+    const expiry = contract.expiresAtUnix;
+    if (expiry > periodStartUnix && expiry < periodEndUnix) {
+      boundaries.add(expiry);
+    }
+  }
+
+  const sorted = [...boundaries].sort((left, right) => left - right);
+  const segments: Array<{ startUnix: number; endUnix: number }> = [];
+  for (let index = 0; index < sorted.length - 1; index += 1) {
+    segments.push({ startUnix: sorted[index], endUnix: sorted[index + 1] });
+  }
+
+  return segments;
+}
+
+export function hasTaskAutomationActive(
+  company: CompanyState,
+  config: EconomyConfig,
+  atUnix: number,
+): boolean {
+  return config.managers.some(
+    (role) =>
+      role.automatesTasks &&
+      role.appliesTo === company.companyKind &&
+      isExecutiveHired(company, role.id, atUnix),
+  );
+}
+
 export function processCompanyProgression(
   appState: AppState,
   config: EconomyConfig,
@@ -50,10 +99,9 @@ export function processCompanyProgression(
       continue;
     }
 
-    expireExecutiveContracts(company, nowUnix);
-
     const industry = getIndustry(config, company.industryId);
     if (!industry) {
+      expireExecutiveContracts(company, nowUnix);
       continue;
     }
 
@@ -69,6 +117,7 @@ export function processCompanyProgression(
     }
 
     runAutomatedExecutiveTasks(appState, config, company, periodStartUnix, nowUnix);
+    expireExecutiveContracts(company, nowUnix);
   }
 
   applyRankIfImproved(appState, config);
@@ -81,35 +130,40 @@ function runAutomatedExecutiveTasks(
   periodStartUnix: number,
   periodEndUnix: number,
 ): void {
-  const hasAutomation = config.managers.some((role) => {
-    if (!isExecutiveHired(company, role.id, periodEndUnix)) {
-      return false;
-    }
-    return getManager(config, role.id)?.automatesTasks ?? false;
-  });
-
-  if (!hasAutomation) {
+  const segments = buildAutomationPeriodSegments(company, config, periodStartUnix, periodEndUnix);
+  if (segments.length === 0) {
     return;
   }
 
   for (const activity of getActivitiesForKind(config, company.companyKind)) {
     const cooldownKey = `${company.id}:${activity.id}`;
-    const readyAt = appState.activityCooldowns[cooldownKey] ?? 0;
-    const { runCount, nextReadyAtUnix } = countAutomatedActivityRuns(
-      readyAt,
-      periodStartUnix,
-      periodEndUnix,
-      activity.cooldownSeconds,
-    );
+    let readyAt = appState.activityCooldowns[cooldownKey] ?? 0;
 
-    if (runCount <= 0) {
-      continue;
+    for (const segment of segments) {
+      if (!hasTaskAutomationActive(company, config, segment.startUnix)) {
+        continue;
+      }
+
+      const { runCount, nextReadyAtUnix } = countAutomatedActivityRuns(
+        readyAt,
+        segment.startUnix,
+        segment.endUnix,
+        activity.cooldownSeconds,
+      );
+
+      if (runCount <= 0) {
+        continue;
+      }
+
+      company.cashBalance = company.cashBalance.add(
+        MoneyValue.fromMinor(activity.rewardMinor * runCount),
+      );
+      readyAt = nextReadyAtUnix;
     }
 
-    company.cashBalance = company.cashBalance.add(
-      MoneyValue.fromMinor(activity.rewardMinor * runCount),
-    );
-    appState.activityCooldowns[cooldownKey] = nextReadyAtUnix;
+    if (readyAt !== (appState.activityCooldowns[cooldownKey] ?? 0)) {
+      appState.activityCooldowns[cooldownKey] = readyAt;
+    }
   }
 }
 

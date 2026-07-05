@@ -1,4 +1,5 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
+import { MoneyValue } from '@/domain/money/MoneyValue';
 
 export const CURRENT_SCHEMA_VERSION = 8;
 
@@ -31,8 +32,7 @@ export function createSaveData(): SaveData {
     clientVersion: '0.1.0',
     player: {
       playerId: '',
-      cashBalance: { amountMinorUnits: 0 } as never,
-      personalCashBalance: { amountMinorUnits: 0 } as never,
+      personalCashBalance: MoneyValue.fromMinor(0),
       businessRank: 1,
       maxCompanies: 3,
       holdingCompanyId: '',

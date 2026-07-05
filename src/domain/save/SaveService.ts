@@ -5,9 +5,10 @@ import { duplicatePlayerState } from '@/domain/core/PlayerState';
 import { duplicatePurchaseState } from '@/domain/core/PurchaseState';
 import { EconomyConfig } from '@/domain/config/EconomyConfig';
 import { fail, ok, OperationResult } from '@/domain/core/OperationResult';
-import { migrateSavePayload, SaveData, CURRENT_SCHEMA_VERSION } from '@/domain/save/SaveData';
-import { saveDataFromDictionary, saveDataToDictionary } from '@/domain/save/SaveSerializer';
-import { attachChecksum, verifyChecksum } from '@/domain/save/SaveIntegrityService';
+import { SaveData, CURRENT_SCHEMA_VERSION } from '@/domain/save/SaveData';
+import { saveDataToDictionary } from '@/domain/save/SaveSerializer';
+import { attachChecksum } from '@/domain/save/SaveIntegrityService';
+import { loadSaveDataFromPayload } from '@/domain/save/SaveLoadService';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { calculateConglomerateNetWorthMinor, calculatePersonalNetWorthMinor } from '@/domain/progression/ProgressionService';
 import { calculateHourlyNetMinor } from '@/domain/economy/CompanyIncomeService';
@@ -67,9 +68,8 @@ export async function loadGame(): Promise<OperationResult<{ saveData: SaveData |
 
   try {
     const parsed = JSON.parse(jsonText) as Record<string, unknown>;
-    const migrated = migrateSavePayload(parsed);
-    const saveData = saveDataFromDictionary(migrated);
-    if (!(await verifyChecksum(saveData))) {
+    const saveData = await loadSaveDataFromPayload(parsed);
+    if (!saveData) {
       return restoreBackup('save_checksum_failed', 'Primary save checksum mismatch');
     }
     return ok({ saveData, hasLoadedSave: true });
@@ -89,8 +89,8 @@ async function restoreBackup(
 
   try {
     const parsed = JSON.parse(backupText) as Record<string, unknown>;
-    const saveData = saveDataFromDictionary(migrateSavePayload(parsed));
-    if (!(await verifyChecksum(saveData))) {
+    const saveData = await loadSaveDataFromPayload(parsed);
+    if (!saveData) {
       return fail(errorCode, errorMessage);
     }
     return ok({ saveData, hasLoadedSave: true });

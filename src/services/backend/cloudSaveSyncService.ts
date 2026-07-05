@@ -1,7 +1,6 @@
 import { SaveData } from '@/domain/save/SaveData';
-import { migrateSavePayload } from '@/domain/save/SaveData';
-import { saveDataFromDictionary, saveDataToDictionary } from '@/domain/save/SaveSerializer';
-import { verifyChecksum } from '@/domain/save/SaveIntegrityService';
+import { loadSaveDataFromPayload } from '@/domain/save/SaveLoadService';
+import { saveDataToDictionary } from '@/domain/save/SaveSerializer';
 import { CloudSaveResponse, CloudSaveUploadRequest } from '@/services/api/types';
 
 export function cloudUpdatedAtUnix(updatedAt: string): number {
@@ -49,9 +48,8 @@ export async function pickSaveBeforeOffline(
 export async function parseCloudSaveResponse(cloudSave: CloudSaveResponse): Promise<SaveData | null> {
   try {
     const payload = JSON.parse(cloudSave.payloadJson) as Record<string, unknown>;
-    const migrated = migrateSavePayload(payload);
-    const saveData = saveDataFromDictionary(migrated);
-    if (!(await verifyChecksum(saveData))) {
+    const saveData = await loadSaveDataFromPayload(payload);
+    if (!saveData) {
       return null;
     }
     saveData.lastServerSeenAtUnix = cloudUpdatedAtUnix(cloudSave.updatedAt);
