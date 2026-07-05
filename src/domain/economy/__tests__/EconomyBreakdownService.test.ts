@@ -105,4 +105,40 @@ describe('EconomyBreakdownService', () => {
     expect(breakdown.lines.some((line) => line.id === 'vacancy_revenue')).toBe(true);
     expect(breakdown.lines.some((line) => line.id === 'leverage_revenue')).toBe(true);
   });
+
+  it('keeps retention industry lines aligned with effective revenue and net', () => {
+    const company = {
+      id: 'sw-1',
+      name: 'Dev Shop',
+      companyKind: CompanyKinds.SUBSIDIARY,
+      industryId: 'software',
+      level: 2,
+      cashBalance: MoneyValue.zero(),
+      reputation: 0,
+      automationLevel: 0,
+      automationPolicy: 'balanced' as const,
+      executiveContracts: {},
+      activeEffects: [],
+      integrationDebtMinor: 0,
+      integrationComplete: true,
+      lifetimeProfitMinor: 0,
+      employeeCount: 3,
+      payrollLevel: 2,
+      revenuePerHour: MoneyValue.fromMinor(150_000),
+      expensesPerHour: MoneyValue.fromMinor(80_000),
+      riskLevel: 0.4,
+      upgradeTrackLevels: { quality: 2 },
+      createdAtUnix: 0,
+      updatedAtUnix: 0,
+    };
+
+    const expectedNet = getRevenuePerHour(company, config, {}, [], 1_000)
+      .subtract(getExpensesPerHour(company, config, {}, 1_000))
+      .amountMinorUnits;
+    const breakdown = buildCompanyEconomyBreakdown(company, config, {}, [], 1_000);
+
+    expect(breakdown.netMinorPerHour).toBe(expectedNet);
+    expect(sumBreakdownLines(breakdown, 'revenue')).toBe(breakdown.grossRevenueMinorPerHour);
+    expect(breakdown.lines.some((line) => line.id === 'retention_revenue')).toBe(true);
+  });
 });
