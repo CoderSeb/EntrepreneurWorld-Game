@@ -18,6 +18,7 @@ import { MAX_PAYROLL_LEVEL, MIN_PAYROLL_LEVEL } from '@/domain/companies/Employe
 import { EXECUTIVE_AUTOMATION_POLICIES } from '@/domain/viewModels/CompanyUiModel';
 import { getAutomationPolicyLabel } from '@/i18n/policyLabels';
 import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyService';
+import { formatDurationSeconds } from '@/domain/time/DurationFormat';
 
 export default function CompanyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -478,7 +479,9 @@ export default function CompanyDetailScreen() {
                   ? t.common.automated
                   : task.ready
                     ? t.common.ready
-                    : interpolate(t.common.cooldownSeconds, { seconds: task.cooldownRemaining })}
+                    : interpolate(t.common.cooldownRemaining, {
+                        duration: formatDurationSeconds(task.cooldownRemaining),
+                      })}
                 {task.effectDescription
                   ? interpolate(t.company.taskEffect, { effect: task.effectDescription })
                   : task.rewardMinor > 0

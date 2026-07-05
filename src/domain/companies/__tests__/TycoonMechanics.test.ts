@@ -4,6 +4,7 @@ import { MoneyValue } from '@/domain/money/MoneyValue';
 import { parseEconomyConfig } from '@/domain/config/EconomyConfig';
 import {
   applyActivityEffect,
+  describeActivityEffect,
   getActivityRevenueMultiplier,
 } from '@/domain/companies/ActivityEffectService';
 import { getRevenuePerHour, getExpensesPerHour } from '@/domain/economy/EffectiveEconomyCalculator';
@@ -40,6 +41,11 @@ describe('ActivityEffectService', () => {
       name: 'Cafe',
     };
   }
+
+  it('describes effect duration without rounding short boosts to whole hours', () => {
+    expect(describeActivityEffect(serveActivity)).toContain('30m');
+    expect(describeActivityEffect(serveActivity)).not.toContain('1h');
+  });
 
   it('applies temporary revenue boost instead of large cash rewards', () => {
     const activity = config.activities.find((entry) => entry.id === 'launch_campaign')!;

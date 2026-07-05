@@ -1,22 +1,27 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useGame } from '@/context/GameContext';
 import { interpolate, useTranslation } from '@/i18n';
+import { formatDurationSeconds } from '@/domain/time/DurationFormat';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
 type TaskCardProps = {
-  companyName: string;
   label: string;
   rewardMinor: number;
+  effectDescription?: string | null;
   ready: boolean;
   cooldownRemaining: number;
   onPress: () => void;
+  companyName?: string;
+  showCompanyName?: boolean;
 };
 
 export function TaskCard({
   companyName,
+  showCompanyName = true,
   label,
   rewardMinor,
+  effectDescription,
   ready,
   cooldownRemaining,
   onPress,
@@ -24,24 +29,43 @@ export function TaskCard({
   const { formatMoneyCompact } = useGame();
   const { t } = useTranslation();
 
+  const statusText = ready
+    ? t.common.ready
+    : interpolate(t.common.cooldownRemaining, {
+        duration: formatDurationSeconds(cooldownRemaining),
+      });
+
+  const metaParts = [effectDescription, statusText].filter(Boolean);
+
   return (
     <Pressable
       onPress={onPress}
       disabled={!ready}
       style={[styles.card, !ready && styles.cardDisabled]}
     >
-      <View style={styles.header}>
-        <Text style={styles.company} numberOfLines={2}>
-          {companyName.toUpperCase()}
-        </Text>
-        <Text style={[styles.reward, { color: ready ? colors.success : colors.muted }]}>
-          +{formatMoneyCompact(rewardMinor)}
-        </Text>
+      {showCompanyName && companyName ? (
+        <View style={styles.header}>
+          <Text style={styles.company} numberOfLines={2}>
+            {companyName.toUpperCase()}
+          </Text>
+          {rewardMinor > 0 ? (
+            <Text style={[styles.reward, { color: ready ? colors.success : colors.muted }]}>
+              +{formatMoneyCompact(rewardMinor)}
+            </Text>
+          ) : null}
+        </View>
+      ) : null}
+      <View style={styles.bodyRow}>
+        <View style={styles.body}>
+          <Text style={styles.label}>{label}</Text>
+          <Text style={styles.meta}>{metaParts.join(' · ')}</Text>
+        </View>
+        {rewardMinor > 0 && !showCompanyName ? (
+          <Text style={[styles.reward, { color: ready ? colors.success : colors.muted }]}>
+            +{formatMoneyCompact(rewardMinor)}
+          </Text>
+        ) : null}
       </View>
-      <Text style={styles.label}>{label}</Text>
-      <Text style={styles.meta}>
-        {ready ? t.common.ready : interpolate(t.task.cooldown, { seconds: cooldownRemaining })}
-      </Text>
     </Pressable>
   );
 }
@@ -57,6 +81,8 @@ const styles = StyleSheet.create({
   },
   cardDisabled: { opacity: 0.55 },
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.sm },
+  bodyRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
+  body: { flex: 1, gap: 2 },
   company: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, letterSpacing: 1, flex: 1, flexShrink: 1 },
   reward: { fontFamily: fonts.mono, fontSize: fontSizes.md, fontWeight: '700' },
   label: { fontFamily: fonts.display, fontSize: fontSizes.md, color: colors.text, fontWeight: '700' },

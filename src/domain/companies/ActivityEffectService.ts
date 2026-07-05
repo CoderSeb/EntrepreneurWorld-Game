@@ -1,6 +1,7 @@
 import { ActivityDefinition, ActivityEffectType } from '@/domain/config/EconomyConfig';
 import { CompanyState } from '@/domain/core/CompanyState';
 import { MoneyValue } from '@/domain/money/MoneyValue';
+import { formatDurationSeconds } from '@/domain/time/DurationFormat';
 
 export type CompanyActiveEffect = {
   activityId: string;
@@ -104,13 +105,13 @@ export function describeActivityEffect(activity: ActivityDefinition): string | n
   if (activity.durationSeconds <= 0) {
     return null;
   }
-  const hours = Math.max(1, Math.round(activity.durationSeconds / 3600));
+  const duration = formatDurationSeconds(activity.durationSeconds);
   const pct = Math.round((activity.effectMultiplier - 1) * 100);
   if (activity.effectType === 'temporary_revenue_multiplier') {
-    return pct >= 0 ? `+${pct}% rev · ${hours}h` : `${pct}% rev · ${hours}h`;
+    return pct >= 0 ? `+${pct}% rev · ${duration}` : `${pct}% rev · ${duration}`;
   }
   if (activity.effectType === 'temporary_expense_multiplier') {
-    return pct >= 0 ? `+${pct}% exp · ${hours}h` : `${pct}% exp · ${hours}h`;
+    return pct >= 0 ? `+${pct}% exp · ${duration}` : `${pct}% exp · ${duration}`;
   }
   return null;
 }

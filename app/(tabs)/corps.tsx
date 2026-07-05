@@ -5,7 +5,7 @@ import { interpolate, useTranslation } from '@/i18n';
 import { Screen } from '@/components/Screen';
 import { HealthBar } from '@/components/HealthBar';
 import { StatBox } from '@/components/StatBox';
-import { TaskCard } from '@/components/TaskCard';
+import { CompanyTaskGroup, useCompanyTaskGroups } from '@/components/CompanyTaskGroup';
 import { SectionHeader } from '@/components/SectionHeader';
 import { EmptyState } from '@/components/EmptyState';
 import { FoundCompanyForm } from '@/components/FoundCompanyForm';
@@ -13,8 +13,9 @@ import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 
 export default function CorpsScreen() {
-  const { dashboard, companies, tasks, performCompanyActivity, formatMoneyCompact } = useGame();
+  const { dashboard, companies, tasks, performCompanyActivity, formatMoney } = useGame();
   const { t } = useTranslation();
+  const companyTaskGroups = useCompanyTaskGroups(companies, tasks);
 
   return (
     <Screen
@@ -51,10 +52,10 @@ export default function CorpsScreen() {
               </Text>
             </View>
             <View style={styles.stats}>
-              <StatBox label={t.corps.revenuePerHr} value={formatMoneyCompact(c.revenueMinor)} small />
+              <StatBox label={t.corps.revenuePerHr} value={formatMoney(c.revenueMinor)} small />
               <StatBox
                 label={t.corps.profitPerHr}
-                value={formatMoneyCompact(c.profitMinor)}
+                value={formatMoney(c.profitMinor)}
                 valueColor={c.sectorColor}
                 small
               />
@@ -79,17 +80,16 @@ export default function CorpsScreen() {
       {tasks.length === 0 ? (
         <EmptyState title={t.corps.noTasksTitle} message={t.corps.noTasksMessage} />
       ) : (
-        tasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            companyName={task.companyName}
-            label={task.label}
-            rewardMinor={task.rewardMinor}
-            ready={task.ready}
-            cooldownRemaining={task.cooldownRemaining}
-            onPress={() => performCompanyActivity(task.companyId, task.activityId)}
-          />
-        ))
+        <View style={styles.taskGroups}>
+          {companyTaskGroups.map(({ company, tasks: companyTasks }) => (
+            <CompanyTaskGroup
+              key={company.id}
+              company={company}
+              tasks={companyTasks}
+              onRunTask={performCompanyActivity}
+            />
+          ))}
+        </View>
       )}
     </Screen>
   );
@@ -110,4 +110,5 @@ const styles = StyleSheet.create({
   sector: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, marginTop: 2 },
   growth: { fontFamily: fonts.mono, fontSize: fontSizes.md, fontWeight: '700' },
   stats: { flexDirection: 'row', justifyContent: 'space-between' },
+  taskGroups: { gap: spacing.md },
 });

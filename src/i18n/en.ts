@@ -18,6 +18,7 @@ export const en = {
     ready: 'READY',
     automated: 'Automated',
     cooldownSeconds: '{seconds}s cooldown',
+    cooldownRemaining: '{duration} remaining',
     yourEmpire: 'Your Empire',
     conglomerate: 'CONGLOMERATE',
     global: 'GLOBAL',
@@ -202,6 +203,7 @@ export const en = {
     noTasksTitle: 'No tasks',
     noTasksMessage: 'Tasks appear when subsidiaries are operational.',
     tasksAutomated: 'Tasks automated',
+    tasksReadyCount: '{count} ready',
   },
   market: {
     title: 'Market intelligence',

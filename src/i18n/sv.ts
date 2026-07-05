@@ -20,6 +20,7 @@ export const sv: TranslationDictionary = {
     ready: 'REDO',
     automated: 'Automatiserad',
     cooldownSeconds: '{seconds}s återstående',
+    cooldownRemaining: '{duration} kvar',
     yourEmpire: 'Ditt imperium',
     conglomerate: 'KONCERN',
     global: 'GLOBAL',
@@ -204,6 +205,7 @@ export const sv: TranslationDictionary = {
     noTasksTitle: 'Inga uppgifter',
     noTasksMessage: 'Uppgifter visas när dotterbolag är i drift.',
     tasksAutomated: 'Uppgifter automatiserade',
+    tasksReadyCount: '{count} redo',
   },
   market: {
     title: 'Marknadsinformation',
