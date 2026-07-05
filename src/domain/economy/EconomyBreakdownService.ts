@@ -10,7 +10,6 @@ import {
   employeeRevenuePerHourMinor,
 } from '@/domain/companies/EmployeeService';
 import {
-  applyIndustryRevenueConstraints,
   getIndustryCapacityCapMinor,
   getIndustryInventoryCapMinor,
   getIndustryLeverageInterestPerHourMinor,
@@ -161,29 +160,29 @@ export function buildCompanyEconomyBreakdown(
     }
   }
 
-  const beforeCapacity = revenueMinor;
   if (industry) {
-    revenueMinor = applyIndustryRevenueConstraints(
-      company,
-      config,
-      MoneyValue.fromMinor(revenueMinor),
-    ).amountMinorUnits;
+    let cappedRevenueMinor = revenueMinor;
     const capacityCap = getIndustryCapacityCapMinor(company, industry);
-    if (capacityCap != null && beforeCapacity > capacityCap) {
+    if (capacityCap != null && cappedRevenueMinor > capacityCap) {
       lines.push({
         id: 'capacity_cap_revenue',
-        amountMinorPerHour: capacityCap - beforeCapacity,
+        amountMinorPerHour: capacityCap - cappedRevenueMinor,
         kind: 'revenue',
       });
+      cappedRevenueMinor = capacityCap;
     }
+
     const inventoryCap = getIndustryInventoryCapMinor(company, industry);
-    if (inventoryCap != null && revenueMinor > inventoryCap) {
+    if (inventoryCap != null && cappedRevenueMinor > inventoryCap) {
       lines.push({
         id: 'inventory_cap_revenue',
-        amountMinorPerHour: inventoryCap - revenueMinor,
+        amountMinorPerHour: inventoryCap - cappedRevenueMinor,
         kind: 'revenue',
       });
+      cappedRevenueMinor = inventoryCap;
     }
+
+    revenueMinor = cappedRevenueMinor;
   }
 
   let expenseMinor = company.expensesPerHour.amountMinorUnits;
@@ -261,15 +260,22 @@ export function buildCompanyEconomyBreakdown(
     expenseMinor += integrationDebt;
   }
 
+  const grossFromLines = lines
+    .filter((line) => line.kind === 'revenue')
+    .reduce((sum, line) => sum + line.amountMinorPerHour, 0);
+  const expensesFromLines = lines
+    .filter((line) => line.kind === 'expense')
+    .reduce((sum, line) => sum + line.amountMinorPerHour, 0);
+  const lineNet = grossFromLines - expensesFromLines;
+
   const actualNet = getRevenuePerHour(company, config, marketState, subsidiaries, nowUnix)
     .subtract(getExpensesPerHour(company, config, marketState, nowUnix))
     .amountMinorUnits;
-  const lineNet = revenueMinor - expenseMinor;
 
   return {
     lines,
-    grossRevenueMinorPerHour: revenueMinor,
-    totalExpensesMinorPerHour: expenseMinor,
+    grossRevenueMinorPerHour: grossFromLines,
+    totalExpensesMinorPerHour: expensesFromLines,
     netMinorPerHour: lineNet === actualNet ? lineNet : actualNet,
   };
 }

@@ -3,6 +3,7 @@ import { createAppState } from '@/domain/core/AppState';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 import { parseEconomyConfig } from '@/domain/config/EconomyConfig';
 import { applyCompanyIncomeForHours } from '@/domain/economy/CompanyIncomeService';
+import { getActivityRevenueMultiplier } from '@/domain/companies/ActivityEffectService';
 import {
   buildAutomationPeriodSegments,
   countAutomatedActivityRuns,
@@ -111,6 +112,45 @@ describe('CompanyProgressionService', () => {
     ).runCount;
     expect(activeWindowRuns).toBeLessThan(fullWindowRuns);
   });
+
+  it.each([8, 72])(
+    'does not compound serve_customers activity boosts during %sh CEO automation',
+    (hours) => {
+      const serveActivity = config.activities.find((entry) => entry.id === 'serve_customers')!;
+      const nowUnix = 200_000;
+      const periodSeconds = hours * 3600;
+      const state = createAppState();
+      state.companies.push(
+        createSubsidiary({
+          executiveContracts: {
+            ceo: { expiresAtUnix: nowUnix + 3600 },
+          },
+        }),
+      );
+
+      processCompanyProgression(state, config, periodSeconds, nowUnix);
+
+      const company = state.companies[0];
+      const serveEffects = company.activeEffects.filter(
+        (effect) => effect.activityId === 'serve_customers',
+      );
+      const activityIds = company.activeEffects.map((effect) => effect.activityId);
+
+      expect(serveEffects.length).toBeLessThanOrEqual(1);
+      expect(new Set(activityIds).size).toBe(activityIds.length);
+      if (serveEffects[0]) {
+        expect(serveEffects[0].multiplier).toBe(serveActivity.effectMultiplier);
+      }
+
+      const expectedRevenueMultiplier = company.activeEffects
+        .filter((effect) => effect.effectType === 'temporary_revenue_multiplier')
+        .reduce((multiplier, effect) => multiplier * effect.multiplier, 1);
+      expect(getActivityRevenueMultiplier(company, nowUnix)).toBeCloseTo(
+        expectedRevenueMultiplier,
+        5,
+      );
+    },
+  );
 });
 
 describe('CompanyIncomeService lifetime profit', () => {

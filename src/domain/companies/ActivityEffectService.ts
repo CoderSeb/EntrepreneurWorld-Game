@@ -71,12 +71,20 @@ export function applyActivityEffect(
   let effectApplied = false;
   if (activity.effectType !== 'cash_reward' && activity.durationSeconds > 0) {
     pruneExpiredEffects(company, nowUnix);
-    company.activeEffects.push({
+    const nextEffect: CompanyActiveEffect = {
       activityId: activity.id,
       effectType: activity.effectType,
       multiplier: activity.effectMultiplier,
       expiresAtUnix: nowUnix + activity.durationSeconds,
-    });
+    };
+    const existingIndex = company.activeEffects.findIndex(
+      (effect) => effect.activityId === activity.id,
+    );
+    if (existingIndex >= 0) {
+      company.activeEffects[existingIndex] = nextEffect;
+    } else {
+      company.activeEffects.push(nextEffect);
+    }
     effectApplied = true;
   }
 

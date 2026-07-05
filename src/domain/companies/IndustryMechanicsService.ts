@@ -102,6 +102,25 @@ export function getIndustryRetentionMultiplier(
   return Math.max(0.55, Math.min(1.2, retention));
 }
 
+export function applyIndustryRevenueCaps(
+  company: CompanyState,
+  industry: IndustryDefinition,
+  revenueMinor: number,
+): number {
+  let amountMinor = revenueMinor;
+  const capacityCap = getIndustryCapacityCapMinor(company, industry);
+  if (capacityCap != null) {
+    amountMinor = Math.min(amountMinor, capacityCap);
+  }
+
+  const inventoryCap = getIndustryInventoryCapMinor(company, industry);
+  if (inventoryCap != null) {
+    amountMinor = Math.min(amountMinor, inventoryCap);
+  }
+
+  return Math.max(0, amountMinor);
+}
+
 export function applyIndustryRevenueConstraints(
   company: CompanyState,
   config: EconomyConfig,
@@ -120,18 +139,9 @@ export function applyIndustryRevenueConstraints(
   amountMinor = Math.round(amountMinor * getIndustryRetentionMultiplier(company, industry));
   amountMinor = Math.round(amountMinor * getIndustryVacancyMultiplier(company, industry));
   amountMinor = Math.round(amountMinor * getIndustryLeverageRevenueMultiplier(company, industry));
+  amountMinor = applyIndustryRevenueCaps(company, industry, amountMinor);
 
-  const capacityCap = getIndustryCapacityCapMinor(company, industry);
-  if (capacityCap != null) {
-    amountMinor = Math.min(amountMinor, capacityCap);
-  }
-
-  const inventoryCap = getIndustryInventoryCapMinor(company, industry);
-  if (inventoryCap != null) {
-    amountMinor = Math.min(amountMinor, inventoryCap);
-  }
-
-  return MoneyValue.fromMinor(Math.max(0, amountMinor));
+  return MoneyValue.fromMinor(amountMinor);
 }
 
 export function describeIndustryBottleneck(

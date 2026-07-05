@@ -12,9 +12,10 @@ import economyJson from '../../../../assets/config/economy_config_v1.json';
 const config = parseEconomyConfig(economyJson as never);
 
 describe('ActivityEffectService', () => {
-  it('applies temporary revenue boost instead of large cash rewards', () => {
-    const activity = config.activities.find((entry) => entry.id === 'launch_campaign')!;
-    const company = {
+  const serveActivity = config.activities.find((entry) => entry.id === 'serve_customers')!;
+
+  function createCafeCompany() {
+    return {
       id: 'sub-1',
       companyKind: CompanyKinds.SUBSIDIARY,
       industryId: 'cafe',
@@ -22,11 +23,11 @@ describe('ActivityEffectService', () => {
       cashBalance: MoneyValue.zero(),
       reputation: 0,
       automationLevel: 0,
-    automationPolicy: 'balanced' as const,
+      automationPolicy: 'balanced' as const,
       executiveContracts: {},
       activeEffects: [],
-    integrationDebtMinor: 0,
-    integrationComplete: true,
+      integrationDebtMinor: 0,
+      integrationComplete: true,
       lifetimeProfitMinor: 0,
       employeeCount: 2,
       payrollLevel: 1,
@@ -38,6 +39,11 @@ describe('ActivityEffectService', () => {
       updatedAtUnix: 0,
       name: 'Cafe',
     };
+  }
+
+  it('applies temporary revenue boost instead of large cash rewards', () => {
+    const activity = config.activities.find((entry) => entry.id === 'launch_campaign')!;
+    const company = createCafeCompany();
 
     const beforeCash = company.cashBalance.amountMinorUnits;
     const result = applyActivityEffect(company, activity, 1_000);
@@ -45,6 +51,17 @@ describe('ActivityEffectService', () => {
     expect(result.effectApplied).toBe(true);
     expect(company.cashBalance.amountMinorUnits).toBe(beforeCash);
     expect(getActivityRevenueMultiplier(company, 1_000)).toBeGreaterThan(1);
+  });
+
+  it('refreshes the same activity instead of stacking duplicate effects', () => {
+    const company = createCafeCompany();
+
+    for (let run = 0; run < 8; run += 1) {
+      applyActivityEffect(company, serveActivity, 1_000 + run * 60);
+    }
+
+    expect(company.activeEffects).toHaveLength(1);
+    expect(getActivityRevenueMultiplier(company, 1_500)).toBe(serveActivity.effectMultiplier);
   });
 });
 
