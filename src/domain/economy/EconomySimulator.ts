@@ -1,14 +1,15 @@
-import { EconomyConfig } from '@/domain/config/EconomyConfig';
 import { AppState } from '@/domain/core/AppState';
-import { PlayerState } from '@/domain/core/PlayerState';
 import { CompanyState } from '@/domain/core/CompanyState';
+import { PlayerState } from '@/domain/core/PlayerState';
 import { MarketState } from '@/domain/core/AppState';
 import { calculateForHours } from '@/domain/economy/IncomeExpenseCalculator';
+import { applyCompanyIncomeForHours } from '@/domain/economy/CompanyIncomeService';
 import { calculateOfflineProgress } from '@/domain/economy/OfflineProgressCalculator';
 import { createSimulationResult, SimulationResult } from '@/domain/economy/SimulationResult';
+import { EconomyConfig } from '@/domain/config/EconomyConfig';
 
 export function simulateTick(
-  player: PlayerState,
+  _player: PlayerState,
   companies: CompanyState[],
   deltaSeconds: number,
   config: EconomyConfig,
@@ -17,9 +18,7 @@ export function simulateTick(
   const hours = deltaSeconds / 3600;
   const gross = calculateForHours(companies, hours, config, marketState, 'income');
   const expenses = calculateForHours(companies, hours, config, marketState, 'expense');
-  const net = gross.subtract(expenses);
-
-  player.cashBalance = player.cashBalance.add(net);
+  const net = applyCompanyIncomeForHours(companies, hours, config, marketState);
 
   const result = createSimulationResult();
   result.grossIncome = gross;
@@ -32,7 +31,7 @@ export function simulateTick(
 }
 
 export function simulateOffline(
-  player: PlayerState,
+  _player: PlayerState,
   companies: CompanyState[],
   offlineDurationSeconds: number,
   config: EconomyConfig,
@@ -44,7 +43,12 @@ export function simulateOffline(
     config,
     marketState,
   );
-  player.cashBalance = player.cashBalance.add(result.netIncome);
+  applyCompanyIncomeForHours(
+    companies,
+    result.effectiveHours,
+    config,
+    marketState,
+  );
   return result;
 }
 

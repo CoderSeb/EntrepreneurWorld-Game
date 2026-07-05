@@ -1,4 +1,4 @@
-import { MINOR_UNITS_PER_MAJOR } from '@/domain/money/MoneyValue';
+import { MINOR_UNITS_PER_MAJOR } from '@/domain/money/moneyConstants';
 
 export type DisplayCurrencyCode = 'USD' | 'EUR' | 'SEK';
 

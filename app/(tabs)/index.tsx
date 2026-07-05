@@ -51,6 +51,14 @@ export default function HqScreen() {
       <Card accentColor={colors.primary} glow>
         <Text style={styles.cardLabel}>{t.hq.netWorth}</Text>
         <Text style={styles.heroValue}>{formatMoneyCompact(dashboard.netWorth.amountMinorUnits)}</Text>
+        <View style={styles.netWorthRow}>
+          <Text style={styles.netWorthMeta}>
+            {t.hq.conglomerateNetWorth}: {formatMoneyCompact(dashboard.conglomerateNetWorth.amountMinorUnits)}
+          </Text>
+          <Text style={styles.netWorthMeta}>
+            {t.hq.personalNetWorth}: {formatMoneyCompact(dashboard.personalNetWorth.amountMinorUnits)}
+          </Text>
+        </View>
       </Card>
 
       <View style={styles.kpiRow}>
@@ -124,6 +132,8 @@ const styles = StyleSheet.create({
   subtitle: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.muted, letterSpacing: 2, marginTop: 2 },
   cardLabel: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, letterSpacing: 1.5, marginBottom: 4 },
   heroValue: { fontFamily: fonts.display, fontSize: fontSizes.hero, color: colors.primary, fontWeight: '900' },
+  netWorthRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm, marginTop: spacing.xs },
+  netWorthMeta: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.muted },
   offlineValue: { fontFamily: fonts.display, fontSize: fontSizes.xxl, color: colors.success, fontWeight: '800' },
   offlineMeta: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, marginBottom: spacing.sm },
   kpiRow: { flexDirection: 'row', gap: spacing.sm },

@@ -95,6 +95,12 @@ export type IndustryDefinition = {
   preferredTrackId: string | null;
 };
 
+export type TreasuryConfig = {
+  salaryTaxRate: number;
+  minTransferMinor: number;
+  minSalaryMinor: number;
+};
+
 export type EconomyConfig = {
   version: number;
   startingCashMinor: number;
@@ -103,6 +109,7 @@ export type EconomyConfig = {
   maxOfflineHoursRewarded: number;
   lowCashThresholdMinor: number;
   maxActiveLoans: number;
+  treasury: TreasuryConfig;
   offlineEfficiency: OfflineEfficiencySegment[];
   companyLimits: CompanyLimitRule[];
   activities: ActivityDefinition[];
@@ -248,6 +255,11 @@ type RawConfig = {
     accent_color?: string;
     preferred_track_id?: string;
   }>;
+  treasury?: {
+    salary_tax_rate?: number;
+    min_transfer_minor?: number;
+    min_salary_minor?: number;
+  };
 };
 
 export function parseEconomyConfig(data: RawConfig): EconomyConfig {
@@ -278,6 +290,11 @@ export function parseEconomyConfig(data: RawConfig): EconomyConfig {
     maxOfflineHoursRewarded: data.max_offline_hours_rewarded ?? 720,
     lowCashThresholdMinor: data.low_cash_threshold_minor ?? 500_000,
     maxActiveLoans: data.max_active_loans ?? 2,
+    treasury: {
+      salaryTaxRate: data.treasury?.salary_tax_rate ?? 0.32,
+      minTransferMinor: data.treasury?.min_transfer_minor ?? 100_000,
+      minSalaryMinor: data.treasury?.min_salary_minor ?? 100_000,
+    },
     offlineEfficiency: (data.offline_efficiency ?? []).map((s) => ({
       fromHours: s.from_hours,
       toHours: s.to_hours,

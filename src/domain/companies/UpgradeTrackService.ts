@@ -3,6 +3,7 @@ import { AppState, findCompany } from '@/domain/core/AppState';
 import { CompanyState, isHolding } from '@/domain/core/CompanyState';
 import { fail, ok, OperationResult } from '@/domain/core/OperationResult';
 import { MoneyValue } from '@/domain/money/MoneyValue';
+import { tryDeductForSubsidiaryExpense } from '@/domain/treasury/CompanyTreasury';
 import { applyRankIfImproved } from '@/domain/progression/ProgressionService';
 
 export function getTrackLevel(company: CompanyState, trackId: string): number {
@@ -44,11 +45,9 @@ export function upgradeTrack(
   }
 
   const cost = getUpgradeCost(company, track);
-  if (appState.player.cashBalance.amountMinorUnits < cost.amountMinorUnits) {
-    return fail('insufficient_funds', 'Not enough cash for upgrade');
+  if (!tryDeductForSubsidiaryExpense(appState, company, cost.amountMinorUnits)) {
+    return fail('insufficient_funds', 'Not enough company or holding cash for upgrade');
   }
-
-  appState.player.cashBalance = appState.player.cashBalance.subtract(cost);
   company.upgradeTrackLevels[trackId] = currentLevel + 1;
   company.updatedAtUnix = nowUnix;
   applyRankIfImproved(appState, config);

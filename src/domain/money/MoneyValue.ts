@@ -4,8 +4,9 @@ import {
   formatMoneyCompact as formatMoneyCompactImpl,
   formatMoney as formatMoneyImpl,
 } from '@/domain/money/MoneyFormatter';
+import { MINOR_UNITS_PER_MAJOR } from '@/domain/money/moneyConstants';
 
-export const MINOR_UNITS_PER_MAJOR = 100;
+export { MINOR_UNITS_PER_MAJOR } from '@/domain/money/moneyConstants';
 
 export class MoneyValue {
   readonly amountMinorUnits: number;

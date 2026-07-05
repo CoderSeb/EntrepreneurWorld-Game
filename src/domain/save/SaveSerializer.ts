@@ -32,7 +32,7 @@ function nullableIsoToUnix(value: unknown): number {
 function playerToDict(player: PlayerState): Record<string, unknown> {
   return {
     player_id: player.playerId,
-    cash_balance_minor: player.cashBalance.amountMinorUnits,
+    personal_cash_balance_minor: player.personalCashBalance.amountMinorUnits,
     business_rank: player.businessRank,
     max_companies: player.maxCompanies,
     holding_company_id: player.holdingCompanyId,
@@ -64,7 +64,13 @@ function loanFromDict(payload: Record<string, unknown>): LoanState {
 function playerFromDict(payload: Record<string, unknown>): PlayerState {
   const player = createPlayerState();
   player.playerId = String(payload.player_id ?? '');
-  player.cashBalance = MoneyValue.fromMinor(Number(payload.cash_balance_minor ?? 0));
+  player.personalCashBalance = MoneyValue.fromMinor(
+    Number(
+      payload.personal_cash_balance_minor ??
+        payload.cash_balance_minor ??
+        0,
+    ),
+  );
   player.businessRank = Number(payload.business_rank ?? 1);
   player.maxCompanies = Number(payload.max_companies ?? 3);
   player.holdingCompanyId = String(payload.holding_company_id ?? '');

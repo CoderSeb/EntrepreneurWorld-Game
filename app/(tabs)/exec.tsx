@@ -20,7 +20,7 @@ import { DisplayCurrencyCode } from '@/domain/money/MoneyFormatter';
 import { SupportedLocale } from '@/i18n/locales';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
-import { getApiBaseUrl } from '@/config/backendConfig';
+import { TreasuryPanel } from '@/components/TreasuryPanel';
 
 function formatSyncTime(unix: number | null, neverLabel: string): string {
   if (!unix) {
@@ -103,15 +103,22 @@ export default function ExecScreen() {
         <Text style={styles.sub}>{interpolate(t.exec.conglomerateRank, { rank })}</Text>
         <View style={styles.stats}>
           <StatBox
-            label={t.common.cash}
-            value={formatMoneyCompact(dashboard.playerCash.amountMinorUnits)}
+            label={t.treasury.holdingTreasury}
+            value={formatMoneyCompact(dashboard.holdingCash.amountMinorUnits)}
+            valueColor={colors.primary}
+            small
+          />
+          <StatBox
+            label={t.treasury.personalCash}
+            value={formatMoneyCompact(dashboard.personalCash.amountMinorUnits)}
             valueColor={colors.warning}
             small
           />
-          <StatBox label={t.common.companies} value={String(dashboard.subsidiaryCount)} valueColor={colors.primary} small />
           <StatBox label={t.exec.loanRate} value={formatAnnualRatePercent(annualRate)} valueColor={colors.warning} small />
         </View>
       </Card>
+
+      <TreasuryPanel />
 
       <SectionHeader title={t.exec.backendTitle} subtitle={t.exec.backendSubtitle} />
       <View style={styles.backendCard}>

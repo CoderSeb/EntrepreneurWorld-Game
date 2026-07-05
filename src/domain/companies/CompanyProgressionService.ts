@@ -106,7 +106,7 @@ function runAutomatedExecutiveTasks(
       continue;
     }
 
-    appState.player.cashBalance = appState.player.cashBalance.add(
+    company.cashBalance = company.cashBalance.add(
       MoneyValue.fromMinor(activity.rewardMinor * runCount),
     );
     appState.activityCooldowns[cooldownKey] = nextReadyAtUnix;

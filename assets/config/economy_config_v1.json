@@ -6,6 +6,11 @@
   "low_cash_threshold_minor": 500000,
   "max_active_loans": 2,
   "max_offline_hours_rewarded": 720,
+  "treasury": {
+    "salary_tax_rate": 0.32,
+    "min_transfer_minor": 100000,
+    "min_salary_minor": 100000
+  },
   "offline_efficiency": [
     { "from_hours": 0, "to_hours": 72, "multiplier": 1.0 },
     { "from_hours": 72, "to_hours": 120, "multiplier": 0.8 },

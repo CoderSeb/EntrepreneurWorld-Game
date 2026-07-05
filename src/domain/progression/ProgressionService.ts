@@ -1,13 +1,12 @@
 import { EconomyConfig, getMaxCompaniesForLevel, IndustryDefinition } from '@/domain/config/EconomyConfig';
 import { AppState } from '@/domain/core/AppState';
-import { CompanyState } from '@/domain/core/CompanyState';
 
-export function calculateNetWorthMinor(appState: AppState): number {
-  let total = appState.player.cashBalance.amountMinorUnits;
+export function calculateConglomerateNetWorthMinor(appState: AppState): number {
+  let total = 0;
   for (const company of appState.companies) {
+    total += company.cashBalance.amountMinorUnits;
     if (company.companyKind === 'subsidiary') {
       total += company.revenuePerHour.amountMinorUnits * 24;
-      total += company.cashBalance.amountMinorUnits;
     }
   }
   for (const loan of appState.player.activeLoans) {
@@ -16,9 +15,18 @@ export function calculateNetWorthMinor(appState: AppState): number {
   return Math.max(0, total);
 }
 
+export function calculatePersonalNetWorthMinor(appState: AppState): number {
+  return Math.max(0, appState.player.personalCashBalance.amountMinorUnits);
+}
+
+/** Total empire value including personal liquid assets. */
+export function calculateNetWorthMinor(appState: AppState): number {
+  return calculateConglomerateNetWorthMinor(appState) + calculatePersonalNetWorthMinor(appState);
+}
+
 export function evaluateBusinessRank(appState: AppState, config: EconomyConfig): number {
   const subsidiaries = appState.companies.filter((c) => c.companyKind === 'subsidiary').length;
-  const netWorth = calculateNetWorthMinor(appState);
+  const netWorth = calculateConglomerateNetWorthMinor(appState);
   let highestRank = 1;
 
   for (const milestone of config.rankMilestones) {

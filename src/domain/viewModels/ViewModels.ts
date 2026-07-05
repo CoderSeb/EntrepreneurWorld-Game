@@ -2,15 +2,19 @@ import { EconomyConfig } from '@/domain/config/EconomyConfig';
 import { AppState } from '@/domain/core/AppState';
 import { CompanyState } from '@/domain/core/CompanyState';
 import { MoneyValue } from '@/domain/money/MoneyValue';
+import { calculateHourlyNetMinor } from '@/domain/economy/CompanyIncomeService';
 import {
-  getExpensesPerHour,
-  getRevenuePerHour,
-} from '@/domain/economy/EffectiveEconomyCalculator';
-import { calculateNetWorthMinor } from '@/domain/progression/ProgressionService';
+  calculateConglomerateNetWorthMinor,
+  calculateNetWorthMinor,
+  calculatePersonalNetWorthMinor,
+} from '@/domain/progression/ProgressionService';
 import { getMaxCompaniesForLevel } from '@/domain/config/EconomyConfig';
+import { findHoldingCompany, sumConglomerateLiquidCashMinor } from '@/domain/treasury/CompanyTreasury';
 
 export type DashboardViewModel = {
-  playerCash: MoneyValue;
+  personalCash: MoneyValue;
+  holdingCash: MoneyValue;
+  conglomerateLiquidCash: MoneyValue;
   hourlyNet: MoneyValue;
   holding: CompanyState | null;
   subsidiaries: CompanyState[];
@@ -18,6 +22,8 @@ export type DashboardViewModel = {
   subsidiaryCount: number;
   maxSubsidiaries: number;
   businessRank: number;
+  conglomerateNetWorth: MoneyValue;
+  personalNetWorth: MoneyValue;
   netWorth: MoneyValue;
   onboardingCompleted: boolean;
   conglomerateName: string;
@@ -39,24 +45,31 @@ export function buildDashboardViewModel(
     }
   }
 
-  for (const company of subsidiaries) {
-    const revenue = getRevenuePerHour(company, config, appState.marketState, subsidiaries);
-    const expenses = getExpensesPerHour(company, config, appState.marketState);
-    hourlyNet = hourlyNet.add(revenue.subtract(expenses));
-  }
+  const hourlyNetMinor = calculateHourlyNetMinor(
+    appState.companies,
+    config,
+    appState.marketState,
+  );
+  hourlyNet = MoneyValue.fromMinor(hourlyNetMinor);
+
+  const resolvedHolding = holding ?? findHoldingCompany(appState);
 
   return {
-    playerCash: appState.player.cashBalance,
+    personalCash: appState.player.personalCashBalance,
+    holdingCash: resolvedHolding?.cashBalance ?? MoneyValue.zero(),
+    conglomerateLiquidCash: MoneyValue.fromMinor(sumConglomerateLiquidCashMinor(appState)),
     hourlyNet,
-    holding,
+    holding: resolvedHolding,
     subsidiaries,
     hasHolding: appState.player.holdingCompanyId.length > 0,
     subsidiaryCount: subsidiaries.length,
     maxSubsidiaries: getMaxCompaniesForLevel(config, appState.player.businessRank),
     businessRank: appState.player.businessRank,
+    conglomerateNetWorth: MoneyValue.fromMinor(calculateConglomerateNetWorthMinor(appState)),
+    personalNetWorth: MoneyValue.fromMinor(calculatePersonalNetWorthMinor(appState)),
     netWorth: MoneyValue.fromMinor(calculateNetWorthMinor(appState)),
     onboardingCompleted: appState.player.onboardingCompleted,
-    conglomerateName: holding?.name ?? '',
+    conglomerateName: resolvedHolding?.name ?? '',
   };
 }
 

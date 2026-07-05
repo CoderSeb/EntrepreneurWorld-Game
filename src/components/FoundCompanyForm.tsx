@@ -29,7 +29,7 @@ import { fonts, fontSizes } from '@/theme/typography';
 
 export function FoundCompanyForm() {
 
-  const { config, dashboard, companies, playerCashMinor, foundSubsidiary, formatMoneyCompact } = useGame();
+  const { config, dashboard, companies, availableFoundingCashMinor, foundSubsidiary, formatMoneyCompact } = useGame();
 
   const { t } = useTranslation();
 
@@ -61,7 +61,7 @@ export function FoundCompanyForm() {
 
     : config.subsidiaryCompanyCostMinor;
 
-  const canAfford = playerCashMinor >= foundingCost;
+  const canAfford = availableFoundingCashMinor >= foundingCost;
 
   const trimmedName = companyName.trim();
 
@@ -167,7 +167,7 @@ export function FoundCompanyForm() {
 
               cost: formatMoneyCompact(foundingCost),
 
-              cash: formatMoneyCompact(playerCashMinor),
+              cash: formatMoneyCompact(availableFoundingCashMinor),
 
             })}
 
@@ -327,7 +327,7 @@ export function FoundCompanyForm() {
 
               {interpolate(t.foundCompany.needMoreCash, {
 
-                amount: formatMoneyCompact(foundingCost - playerCashMinor),
+                amount: formatMoneyCompact(foundingCost - availableFoundingCashMinor),
 
               })}
 

@@ -8,7 +8,8 @@ import { fail, ok, OperationResult } from '@/domain/core/OperationResult';
 import { migrateSavePayload, SaveData, CURRENT_SCHEMA_VERSION } from '@/domain/save/SaveData';
 import { saveDataFromDictionary, saveDataToDictionary } from '@/domain/save/SaveSerializer';
 import { attachChecksum, verifyChecksum } from '@/domain/save/SaveIntegrityService';
-import { MoneyValue } from '@/domain/money/MoneyValue';
+import { calculateConglomerateNetWorthMinor, calculatePersonalNetWorthMinor } from '@/domain/progression/ProgressionService';
+import { calculateHourlyNetMinor } from '@/domain/economy/CompanyIncomeService';
 
 const SAVE_KEY = '@business-empire/save/slot_0';
 const BACKUP_KEY = '@business-empire/save/slot_0.backup';
@@ -28,7 +29,18 @@ export function buildSaveFromAppState(appState: AppState, config: EconomyConfig,
     marketState: JSON.parse(JSON.stringify(appState.marketState)),
     activityCooldowns: { ...appState.activityCooldowns },
     purchases: duplicatePurchaseState(appState.purchases),
-    settings: { ...appState.settings },
+    settings: {
+      ...appState.settings,
+      leaderboard_snapshot: {
+        conglomerate_net_worth_minor: calculateConglomerateNetWorthMinor(appState),
+        personal_net_worth_minor: calculatePersonalNetWorthMinor(appState),
+        hourly_earnings_minor: calculateHourlyNetMinor(
+          appState.companies,
+          config,
+          appState.marketState,
+        ),
+      },
+    },
     checksum: '',
     signatureVersion: 1,
   };
@@ -107,7 +119,7 @@ export async function clearLocalSave(): Promise<void> {
 
 export function applyNewGameDefaults(appState: AppState, config: EconomyConfig, nowUnix: number): void {
   appState.player.playerId = appState.player.playerId || 'local-player';
-  appState.player.cashBalance = MoneyValue.fromMinor(config.startingCashMinor);
+  appState.player.personalCashBalance = MoneyValue.fromMinor(config.startingCashMinor);
   appState.createdAtUnix = nowUnix;
   appState.lastSeenAtUnix = nowUnix;
 }

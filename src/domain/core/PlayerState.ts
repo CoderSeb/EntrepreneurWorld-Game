@@ -3,7 +3,7 @@ import { duplicateLoan, LoanState } from '@/domain/core/LoanState';
 
 export type PlayerState = {
   playerId: string;
-  cashBalance: MoneyValue;
+  personalCashBalance: MoneyValue;
   businessRank: number;
   maxCompanies: number;
   holdingCompanyId: string;
@@ -14,7 +14,7 @@ export type PlayerState = {
 export function createPlayerState(): PlayerState {
   return {
     playerId: '',
-    cashBalance: MoneyValue.zero(),
+    personalCashBalance: MoneyValue.zero(),
     businessRank: 1,
     maxCompanies: 3,
     holdingCompanyId: '',
@@ -30,7 +30,7 @@ export function hasHolding(player: PlayerState): boolean {
 export function duplicatePlayerState(player: PlayerState): PlayerState {
   return {
     playerId: player.playerId,
-    cashBalance: MoneyValue.fromMinor(player.cashBalance.amountMinorUnits),
+    personalCashBalance: MoneyValue.fromMinor(player.personalCashBalance.amountMinorUnits),
     businessRank: player.businessRank,
     maxCompanies: player.maxCompanies,
     holdingCompanyId: player.holdingCompanyId,

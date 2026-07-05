@@ -13,7 +13,7 @@ export function CashHeaderBar() {
   const { t } = useTranslation();
   const [tickProgress, setTickProgress] = useState(0);
 
-  const netPerSecondMinor = Math.round(dashboard.hourlyNet.amountMinorUnits / 3600);
+  const hourlyNetMinor = dashboard.hourlyNet.amountMinorUnits;
   const secondsToNext = Math.max(0, Math.ceil((1 - tickProgress) * TICK_MS / 1000));
 
   useEffect(() => {
@@ -39,13 +39,15 @@ export function CashHeaderBar() {
         </Text>
       </View>
       <View style={styles.right}>
-        <Text style={styles.cashLabel}>{t.common.cash}</Text>
-        <Text style={styles.cashValue}>{formatMoneyCompact(dashboard.playerCash.amountMinorUnits)}</Text>
-        {netPerSecondMinor !== 0 ? (
-          <Text style={[styles.flowMeta, netPerSecondMinor > 0 ? styles.positive : styles.negative]}>
-            {netPerSecondMinor > 0 ? '+' : ''}
-            {formatMoneyCompact(netPerSecondMinor)}
-            {t.header.perSecond}
+        <Text style={styles.cashLabel}>{t.common.treasury}</Text>
+        <Text style={styles.cashValue}>
+          {formatMoneyCompact(dashboard.conglomerateLiquidCash.amountMinorUnits)}
+        </Text>
+        {hourlyNetMinor !== 0 ? (
+          <Text style={[styles.flowMeta, hourlyNetMinor > 0 ? styles.positive : styles.negative]}>
+            {hourlyNetMinor > 0 ? '+' : ''}
+            {formatMoneyCompact(hourlyNetMinor)}
+            {t.header.perHour}
           </Text>
         ) : null}
       </View>

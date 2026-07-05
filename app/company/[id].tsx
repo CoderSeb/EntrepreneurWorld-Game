@@ -28,7 +28,7 @@ export default function CompanyDetailScreen() {
     adjustCompanyEmployees,
     setCompanyPayrollLevel,
     formatMoneyCompact,
-    playerCashMinor,
+    availableCompanyFundingMinor,
   } = useGame();
   const { t } = useTranslation();
   const [upgradeError, setUpgradeError] = useState<string | null>(null);
@@ -47,16 +47,17 @@ export default function CompanyDetailScreen() {
   const executives = getCompanyExecutiveRoles(company.id);
   const levelProgressPercent = Math.round(company.levelProgress * 100);
 
+  const companyFundingMinor = availableCompanyFundingMinor(company.id);
   const systemsMaxed = company.nextAutomationCostMinor === null;
   const canAffordSystems =
-    company.nextAutomationCostMinor !== null && playerCashMinor >= company.nextAutomationCostMinor;
+    company.nextAutomationCostMinor !== null && companyFundingMinor >= company.nextAutomationCostMinor;
 
   const trackMaxed =
     company.preferredTrackId !== null &&
     company.preferredTrackLevel >= company.preferredTrackMaxLevel;
   const canAffordTrack =
     company.nextPreferredTrackCostMinor !== null &&
-    playerCashMinor >= company.nextPreferredTrackCostMinor;
+    companyFundingMinor >= company.nextPreferredTrackCostMinor;
 
   const trackPreviewMinor =
     company.preferredTrackId && !trackMaxed
@@ -106,7 +107,7 @@ export default function CompanyDetailScreen() {
   };
 
   const handleHireExecutive = (roleId: string, hireCostMinor: number) => {
-    if (playerCashMinor < hireCostMinor) {
+    if (companyFundingMinor < hireCostMinor) {
       Alert.alert(t.company.hireFailedTitle, t.executive.insufficientFunds);
       return;
     }
@@ -162,6 +163,7 @@ export default function CompanyDetailScreen() {
         </View>
       }>
       <View style={styles.stats}>
+        <StatBox label={t.company.companyCash} value={formatMoneyCompact(company.cashBalanceMinor)} valueColor={colors.warning} small />
         <StatBox label={t.company.revPerHr} value={formatMoneyCompact(company.revenueMinor)} small />
         <StatBox label={t.company.profitPerHr} value={formatMoneyCompact(company.profitMinor)} valueColor={colors.success} small />
         <StatBox label={t.company.executives} value={String(company.hiredExecutiveCount)} small />
@@ -329,7 +331,7 @@ export default function CompanyDetailScreen() {
             key={role.roleId}
             role={role}
             nowUnix={nowUnix}
-            canAfford={playerCashMinor >= role.hireCostMinor}
+            canAfford={companyFundingMinor >= role.hireCostMinor}
             onHire={
               !role.hired
                 ? () => handleHireExecutive(role.roleId, role.hireCostMinor)

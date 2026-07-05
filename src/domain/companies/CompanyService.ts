@@ -2,9 +2,10 @@ import {
   EconomyConfig,
   getIndustry,
   getIndustryFoundingCost,
+  getMaxCompaniesForLevel,
   ActivityDefinition,
 } from '@/domain/config/EconomyConfig';
-import { AppState, findCompany } from '@/domain/core/AppState';
+import { AppState, findCompany, getSubsidiaries } from '@/domain/core/AppState';
 import { CompanyState } from '@/domain/core/CompanyState';
 import { fail, ok, OperationResult } from '@/domain/core/OperationResult';
 import { hasHolding } from '@/domain/core/PlayerState';
@@ -19,8 +20,13 @@ import {
   getUnlockedIndustries,
   isIndustryUnlocked,
 } from '@/domain/progression/ProgressionService';
-import { getSubsidiaries } from '@/domain/core/AppState';
-import { getMaxCompaniesForLevel } from '@/domain/config/EconomyConfig';
+import {
+  availableFundingForFoundingMinor,
+  findHoldingCompany,
+  tryDeductForSubsidiaryExpense,
+  tryDeductFromHolding,
+  tryDeductFromPersonal,
+} from '@/domain/treasury/CompanyTreasury';
 
 export function createHoldingCompany(
   appState: AppState,
@@ -38,12 +44,11 @@ export function createHoldingCompany(
   }
 
   const cost = MoneyValue.fromMinor(config.holdingCompanyCostMinor);
-  if (appState.player.cashBalance.amountMinorUnits < cost.amountMinorUnits) {
-    return fail('insufficient_funds', 'Not enough cash to create holding company');
+  if (!tryDeductFromPersonal(appState.player, cost.amountMinorUnits)) {
+    return fail('insufficient_funds', 'Not enough personal cash to create holding company');
   }
 
   const company = createHolding(trimmedName, nowUnix);
-  appState.player.cashBalance = appState.player.cashBalance.subtract(cost);
   appState.player.holdingCompanyId = company.id;
   appState.companies.push(company);
   applyRankIfImproved(appState, config);
@@ -85,12 +90,14 @@ export function createSubsidiaryCompany(
   }
 
   const cost = MoneyValue.fromMinor(getIndustryFoundingCost(industry, config));
-  if (appState.player.cashBalance.amountMinorUnits < cost.amountMinorUnits) {
-    return fail('insufficient_funds', 'Not enough cash to start this subsidiary');
+  const holding = findHoldingCompany(appState);
+  if (holding && tryDeductFromHolding(appState, cost.amountMinorUnits)) {
+    // Paid from holding treasury.
+  } else if (!tryDeductFromPersonal(appState.player, cost.amountMinorUnits)) {
+    return fail('insufficient_funds', 'Not enough cash in holding or personal wallet');
   }
 
   const company = createSubsidiary(industry, trimmedName, nowUnix);
-  appState.player.cashBalance = appState.player.cashBalance.subtract(cost);
   appState.companies.push(company);
   appState.player.onboardingCompleted = true;
   applyRankIfImproved(appState, config);
@@ -118,12 +125,11 @@ export function upgradeCompany(
 
   const upgradeCostMinor = getLevelUpgradeCost(company, industry);
   const upgradeCost = MoneyValue.fromMinor(upgradeCostMinor);
-  if (appState.player.cashBalance.amountMinorUnits < upgradeCost.amountMinorUnits) {
-    return fail('insufficient_funds', 'Not enough cash for upgrade');
+  if (!tryDeductForSubsidiaryExpense(appState, company, upgradeCost.amountMinorUnits)) {
+    return fail('insufficient_funds', 'Not enough company or holding cash for upgrade');
   }
 
   const upgraded = applyLevelUpgrade(company, industry, nowUnix);
-  appState.player.cashBalance = appState.player.cashBalance.subtract(upgradeCost);
 
   const index = appState.companies.findIndex((c) => c.id === companyId);
   if (index >= 0) {
@@ -152,7 +158,7 @@ export function performActivity(
   }
 
   const reward = MoneyValue.fromMinor(activity.rewardMinor);
-  appState.player.cashBalance = appState.player.cashBalance.add(reward);
+  company.cashBalance = company.cashBalance.add(reward);
   appState.activityCooldowns[cooldownKey] = nowUnix + activity.cooldownSeconds;
   return ok(reward);
 }

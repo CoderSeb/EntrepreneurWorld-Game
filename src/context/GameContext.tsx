@@ -60,6 +60,12 @@ import {
 } from '@/services/backend/BackendBootstrapService';
 import { AuthSession, clearAuthSession } from '@/services/auth/authSessionStore';
 import {
+  calculateSalaryPreview,
+  transferDividendToHolding,
+  withdrawSalaryFromHolding,
+} from '@/domain/treasury/TreasuryService';
+import { availableFundingForFoundingMinor, availableFundingForSubsidiaryMinor } from '@/domain/treasury/CompanyTreasury';
+import {
   DISPLAY_CURRENCY_SETTING_KEY,
   DisplayCurrencyCode,
   formatMoney,
@@ -120,6 +126,9 @@ type GameContextValue = {
   upgradeCompanyAutomation: (companyId: string) => OperationResult;
   borrowLoan: (productId: string, amountMinor: number) => OperationResult;
   repayLoanById: (loanId: string) => OperationResult;
+  transferDividend: (subsidiaryId: string, amountMinor: number) => OperationResult;
+  withdrawSalary: (grossMinor: number) => OperationResult;
+  previewSalary: (grossMinor: number) => ReturnType<typeof calculateSalaryPreview>;
   saveNow: () => Promise<void>;
   syncCloudNow: () => Promise<SyncResult>;
   reconnectBackend: () => Promise<SyncResult>;
@@ -133,7 +142,11 @@ type GameContextValue = {
     },
   ) => number | null;
   activeLoans: AppState['player']['activeLoans'];
-  playerCashMinor: number;
+  personalCashMinor: number;
+  holdingCashMinor: number;
+  conglomerateLiquidCashMinor: number;
+  availableCompanyFundingMinor: (companyId: string) => number;
+  availableFoundingCashMinor: number;
   displayCurrency: DisplayCurrencyCode;
   setDisplayCurrency: (currency: DisplayCurrencyCode) => void;
   locale: SupportedLocale;
@@ -415,6 +428,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
       borrowLoan: (productId, amountMinor) =>
         mutate(() => takeLoan(state, config, productId, amountMinor, now)),
       repayLoanById: (loanId) => mutate(() => repayLoan(state, loanId)),
+      transferDividend: (subsidiaryId, amountMinor) =>
+        mutate(() => transferDividendToHolding(state, subsidiaryId, amountMinor, now, config)),
+      withdrawSalary: (grossMinor) =>
+        mutate(() => withdrawSalaryFromHolding(state, grossMinor, config, now)),
+      previewSalary: (grossMinor) => calculateSalaryPreview(grossMinor, config),
       saveNow: async () => {
         await persistGame();
       },
@@ -513,7 +531,17 @@ export function GameProvider({ children }: { children: ReactNode }) {
         return previewRevenuePerHourMinor(company, config, state, overrides);
       },
       activeLoans: [...state.player.activeLoans],
-      playerCashMinor: state.player.cashBalance.amountMinorUnits,
+      personalCashMinor: state.player.personalCashBalance.amountMinorUnits,
+      holdingCashMinor: dashboard.holdingCash.amountMinorUnits,
+      conglomerateLiquidCashMinor: dashboard.conglomerateLiquidCash.amountMinorUnits,
+      availableCompanyFundingMinor: (companyId) => {
+        const company = findCompany(state, companyId);
+        if (!company) {
+          return 0;
+        }
+        return availableFundingForSubsidiaryMinor(state, company);
+      },
+      availableFoundingCashMinor: availableFundingForFoundingMinor(state),
       displayCurrency,
       setDisplayCurrency,
       locale,

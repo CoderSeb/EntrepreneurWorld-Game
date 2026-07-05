@@ -48,6 +48,7 @@ export type CompanyUiModel = {
   industryLabel: string;
   sectorColor: string;
   level: number;
+  cashBalanceMinor: number;
   revenueMinor: number;
   expensesMinor: number;
   profitMinor: number;
@@ -136,6 +137,7 @@ export function buildCompanyUiModel(
   return {
     id: company.id,
     name: company.name,
+    cashBalanceMinor: company.cashBalance.amountMinorUnits,
     industryId: company.industryId,
     industryLabel: translations
       ? getIndustryLabel(company.industryId, translations)

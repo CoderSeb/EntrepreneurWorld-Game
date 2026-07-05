@@ -12,7 +12,7 @@ describe('ProgressionService', () => {
   it('calculates net worth from cash and subsidiaries', () => {
     const state = createAppState();
     state.player = createPlayerState();
-    state.player.cashBalance = MoneyValue.fromMinor(1_000_000);
+    state.player.personalCashBalance = MoneyValue.fromMinor(1_000_000);
     state.companies.push({
       id: 'sub1',
       name: 'Sub',
@@ -41,7 +41,26 @@ describe('ProgressionService', () => {
   it('promotes business rank when milestones met', () => {
     const state = createAppState();
     state.player = createPlayerState();
-    state.player.cashBalance = MoneyValue.fromMinor(5_000_000);
+    state.companies.push({
+      id: 'holding-1',
+      name: 'Holding',
+      companyKind: CompanyKinds.HOLDING,
+      industryId: '',
+      level: 1,
+      cashBalance: MoneyValue.fromMinor(5_000_000),
+      reputation: 0,
+      automationLevel: 0,
+      executiveContracts: {},
+      lifetimeProfitMinor: 0,
+      employeeCount: 0,
+      payrollLevel: 1,
+      revenuePerHour: MoneyValue.zero(),
+      expensesPerHour: MoneyValue.zero(),
+      riskLevel: 0,
+      upgradeTrackLevels: {},
+      createdAtUnix: 0,
+      updatedAtUnix: 0,
+    });
     state.companies.push({
       id: 'sub1',
       name: 'Sub',

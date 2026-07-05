@@ -1,6 +1,6 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
 
-export const CURRENT_SCHEMA_VERSION = 7;
+export const CURRENT_SCHEMA_VERSION = 8;
 
 export type SaveData = {
   schemaVersion: number;
@@ -32,6 +32,7 @@ export function createSaveData(): SaveData {
     player: {
       playerId: '',
       cashBalance: { amountMinorUnits: 0 } as never,
+      personalCashBalance: { amountMinorUnits: 0 } as never,
       businessRank: 1,
       maxCompanies: 3,
       holdingCompanyId: '',
@@ -178,6 +179,33 @@ export function migrateSavePayload(rawPayload: Record<string, unknown>): Record<
         state.companies = companies;
         migrated.state = state;
         version = 7;
+        break;
+      }
+      case 7: {
+        const state = (migrated.state as Record<string, unknown>) ?? {};
+        const player = (state.player as Record<string, unknown>) ?? {};
+        const legacyCash = Number(player.cash_balance_minor ?? 0);
+        const companies = (state.companies as Record<string, unknown>[]) ?? [];
+
+        player.personal_cash_balance_minor = 0;
+        let holdingFound = false;
+        for (const company of companies) {
+          if (company.company_kind === 'holding') {
+            company.cash_balance_minor =
+              Number(company.cash_balance_minor ?? 0) + legacyCash;
+            holdingFound = true;
+            break;
+          }
+        }
+        if (!holdingFound && legacyCash > 0) {
+          player.personal_cash_balance_minor = legacyCash;
+        }
+        player.cash_balance_minor = 0;
+
+        state.player = player;
+        state.companies = companies;
+        migrated.state = state;
+        version = 8;
         break;
       }
       default:

@@ -18,7 +18,7 @@ describe('SaveMigrationService', () => {
     });
     expect(migrated.schema_version).toBe(CURRENT_SCHEMA_VERSION);
     const saveData = saveDataFromDictionary(migrated);
-    expect(saveData.player.cashBalance.amountMinorUnits).toBe(100);
+    expect(saveData.player.personalCashBalance.amountMinorUnits).toBe(100);
   });
 
   it('migrates schema 6 executive_hires to executive_contracts', () => {
@@ -47,6 +47,21 @@ describe('SaveMigrationService', () => {
     expect(saveData.companies[0]?.executiveContracts.cmo).toBeDefined();
     expect(saveData.companies[0]?.payrollLevel).toBe(1);
   });
+
+  it('migrates schema 7 legacy player cash into holding treasury', () => {
+    const migrated = migrateSavePayload({
+      schema_version: 7,
+      state: {
+        player: { cash_balance_minor: 1_000_000 },
+        companies: [{ company_kind: 'holding', cash_balance_minor: 50_000 }],
+      },
+    });
+
+    expect(migrated.schema_version).toBe(CURRENT_SCHEMA_VERSION);
+    const saveData = saveDataFromDictionary(migrated);
+    expect(saveData.player.personalCashBalance.amountMinorUnits).toBe(0);
+    expect(saveData.companies[0]?.cashBalance.amountMinorUnits).toBe(1_050_000);
+  });
 });
 
 describe('SaveIntegrityService', () => {
@@ -68,7 +83,7 @@ describe('SaveIntegrityService', () => {
       checksum: '',
       signatureVersion: 1,
     };
-    saveData.player.cashBalance = MoneyValue.fromMinor(5000000);
+    saveData.player.personalCashBalance = MoneyValue.fromMinor(5000000);
     attachChecksumSyncForTests(saveData);
     expect(verifyChecksumSyncForTests(saveData)).toBe(true);
 
