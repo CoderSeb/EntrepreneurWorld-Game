@@ -21,6 +21,24 @@ export function getIndustryCapacityCapMinor(
   return Math.round(company.employeeCount * perEmployee * operationsBonus);
 }
 
+export function getIndustryInventoryCapMinor(
+  company: CompanyState,
+  industry: IndustryDefinition,
+): number | null {
+  if (industry.mechanics?.primaryBottleneck !== 'inventory') {
+    return null;
+  }
+
+  const baseCap = industry.mechanics.inventoryBaseCapMinor ?? 0;
+  if (baseCap <= 0) {
+    return null;
+  }
+
+  const marketingLevel = getTrackLevel(company, 'marketing');
+  const bonusPerLevel = industry.mechanics.inventoryBonusPerMarketingLevel ?? 0;
+  return Math.round(baseCap * (1 + marketingLevel * bonusPerLevel));
+}
+
 export function getIndustryRetentionMultiplier(
   company: CompanyState,
   industry: IndustryDefinition,
@@ -59,6 +77,11 @@ export function applyIndustryRevenueConstraints(
     amountMinor = Math.min(amountMinor, capacityCap);
   }
 
+  const inventoryCap = getIndustryInventoryCapMinor(company, industry);
+  if (inventoryCap != null) {
+    amountMinor = Math.min(amountMinor, inventoryCap);
+  }
+
   return MoneyValue.fromMinor(Math.max(0, amountMinor));
 }
 
@@ -79,6 +102,10 @@ export function describeIndustryBottleneck(
     case 'retention': {
       const retention = getIndustryRetentionMultiplier(company, industry);
       return `retention_${Math.round(retention * 100)}`;
+    }
+    case 'inventory': {
+      const cap = getIndustryInventoryCapMinor(company, industry);
+      return cap != null ? `inventory_cap_${cap}` : null;
     }
     default:
       return null;

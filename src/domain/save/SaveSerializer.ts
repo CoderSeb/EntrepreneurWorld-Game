@@ -6,6 +6,7 @@ import { LoanState } from '@/domain/core/LoanState';
 import { PlayerState, createPlayerState } from '@/domain/core/PlayerState';
 import { PurchaseState, createPurchaseState } from '@/domain/core/PurchaseState';
 import { SaveData, CURRENT_SCHEMA_VERSION } from '@/domain/save/SaveData';
+import { normalizeAutomationPolicy } from '@/domain/companies/ExecutivePolicyService';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 
 function unixToIso(unixTime: number): string {
@@ -90,6 +91,7 @@ function companyToDict(company: CompanyState): Record<string, unknown> {
     cash_balance_minor: company.cashBalance.amountMinorUnits,
     reputation: company.reputation,
     automation_level: company.automationLevel,
+    automation_policy: company.automationPolicy,
     executive_contracts: executiveContractsToDict(company.executiveContracts),
     active_effects: company.activeEffects.map((effect) => ({
       activity_id: effect.activityId,
@@ -97,6 +99,8 @@ function companyToDict(company: CompanyState): Record<string, unknown> {
       multiplier: effect.multiplier,
       expires_at_unix: effect.expiresAtUnix,
     })),
+    integration_debt_minor: company.integrationDebtMinor,
+    integration_complete: company.integrationComplete,
     lifetime_profit_minor: company.lifetimeProfitMinor,
     employee_count: company.employeeCount,
     payroll_level: company.payrollLevel,
@@ -157,8 +161,11 @@ function companyFromDict(payload: Record<string, unknown>): CompanyState {
     cashBalance: MoneyValue.fromMinor(Number(payload.cash_balance_minor ?? 0)),
     reputation: Number(payload.reputation ?? 0),
     automationLevel: Number(payload.automation_level ?? 0),
+    automationPolicy: normalizeAutomationPolicy(String(payload.automation_policy ?? 'balanced')),
     executiveContracts: readExecutiveContracts(payload),
     activeEffects: readActiveEffects(payload),
+    integrationDebtMinor: Number(payload.integration_debt_minor ?? 0),
+    integrationComplete: Boolean(payload.integration_complete ?? true),
     lifetimeProfitMinor: Number(payload.lifetime_profit_minor ?? 0),
     employeeCount: Number(payload.employee_count ?? 0),
     payrollLevel: Number(payload.payroll_level ?? 1),

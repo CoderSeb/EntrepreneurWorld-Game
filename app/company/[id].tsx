@@ -13,6 +13,7 @@ import { ExecutiveRoleCard } from '@/components/ExecutiveRoleCard';
 import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { MAX_PAYROLL_LEVEL, MIN_PAYROLL_LEVEL } from '@/domain/companies/EmployeeService';
+import { EXECUTIVE_AUTOMATION_POLICIES } from '@/domain/viewModels/CompanyUiModel';
 
 export default function CompanyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -27,6 +28,8 @@ export default function CompanyDetailScreen() {
     upgradeCompanyAutomation,
     adjustCompanyEmployees,
     setCompanyPayrollLevel,
+    setCompanyAutomationPolicy,
+    payCompanyIntegrationDebt,
     formatMoneyCompact,
     availableCompanyFundingMinor,
   } = useGame();
@@ -147,6 +150,32 @@ export default function CompanyDetailScreen() {
 
   const preferredTrackName = company.preferredTrackName?.toUpperCase() ?? 'GROWTH';
 
+  const lifecycleLabel =
+    company.lifecyclePhase === 'startup'
+      ? t.company.lifecycleStartup
+      : company.lifecyclePhase === 'growth'
+        ? t.company.lifecycleGrowth
+        : t.company.lifecycleMature;
+
+  const handlePolicyChange = (policy: typeof company.automationPolicy) => {
+    if (!company.hasTaskAutomation) {
+      return;
+    }
+    setCompanyAutomationPolicy(company.id, policy);
+  };
+
+  const handlePayIntegration = () => {
+    const payment = Math.min(company.integrationDebtMinor, company.cashBalanceMinor);
+    if (payment <= 0) {
+      Alert.alert(t.company.upgradeFailedTitle, t.company.insufficientCash);
+      return;
+    }
+    const result = payCompanyIntegrationDebt(company.id, payment);
+    if (!result.success) {
+      Alert.alert(t.company.upgradeFailedTitle, result.errorMessage);
+    }
+  };
+
   return (
     <Screen
       header={
@@ -182,6 +211,81 @@ export default function CompanyDetailScreen() {
           nextLevel: company.level + 1,
         })}
       </Text>
+
+      <SectionHeader title={t.company.lifecycleTitle} subtitle={lifecycleLabel} />
+
+      {company.bottleneckHint ? (
+        <Text style={styles.healthMeta}>{company.bottleneckHint}</Text>
+      ) : null}
+
+      <SectionHeader
+        title={t.company.economyBreakdownTitle}
+        subtitle={t.company.economyBreakdownSubtitle}
+      />
+      {company.economyBreakdown.slice(0, 6).map((line) => (
+        <Text key={line.id} style={styles.healthMeta}>
+          {line.id}: {formatMoneyCompact(line.amountMinorPerHour)}
+          {t.common.perHour}
+        </Text>
+      ))}
+
+      <SectionHeader title={t.company.activeEffectsTitle} />
+      {company.activeEffectSummaries.length === 0 ? (
+        <Text style={styles.healthMeta}>{t.company.activeEffectsEmpty}</Text>
+      ) : (
+        company.activeEffectSummaries.map((summary) => (
+          <Text key={summary} style={styles.preview}>
+            {summary}
+          </Text>
+        ))
+      )}
+
+      {company.hasTaskAutomation ? (
+        <>
+          <SectionHeader
+            title={t.company.automationPolicyTitle}
+            subtitle={t.company.automationPolicySubtitle}
+          />
+          <View style={styles.policyRow}>
+            {EXECUTIVE_AUTOMATION_POLICIES.map((policy) => (
+              <Pressable
+                key={policy}
+                onPress={() => handlePolicyChange(policy)}
+                style={[
+                  styles.policyChip,
+                  company.automationPolicy === policy && styles.policyChipActive,
+                ]}>
+                <Text
+                  style={[
+                    styles.policyLabel,
+                    company.automationPolicy === policy && styles.policyLabelActive,
+                  ]}>
+                  {policy.replace(/_/g, ' ')}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : null}
+
+      {!company.integrationComplete && company.integrationDebtMinor > 0 ? (
+        <>
+          <SectionHeader
+            title={t.company.integrationDebtTitle}
+            subtitle={t.company.integrationDebtSubtitle}
+          />
+          <Text style={styles.healthMeta}>
+            {formatMoneyCompact(company.integrationDebtMinor)} remaining
+          </Text>
+          <PrimaryButton
+            label={interpolate(t.company.integrationPay, {
+              amount: formatMoneyCompact(Math.min(company.integrationDebtMinor, company.cashBalanceMinor)),
+            })}
+            onPress={handlePayIntegration}
+            disabled={company.cashBalanceMinor <= 0}
+          />
+        </>
+      ) : null}
 
       {company.preferredTrackId && company.preferredTrackName ? (
         <>
@@ -361,8 +465,12 @@ export default function CompanyDetailScreen() {
                   ? t.common.automated
                   : task.ready
                     ? t.common.ready
-                    : interpolate(t.common.cooldownSeconds, { seconds: task.cooldownRemaining })}{' '}
-                {interpolate(t.company.taskReward, { reward: formatMoneyCompact(task.rewardMinor) })}
+                    : interpolate(t.common.cooldownSeconds, { seconds: task.cooldownRemaining })}
+                {task.effectDescription
+                  ? interpolate(t.company.taskEffect, { effect: task.effectDescription })
+                  : task.rewardMinor > 0
+                    ? interpolate(t.company.taskReward, { reward: formatMoneyCompact(task.rewardMinor) })
+                    : ''}
               </Text>
             </View>
             {!company.hasTaskAutomation ? (
@@ -439,4 +547,16 @@ const styles = StyleSheet.create({
   taskLabel: { fontFamily: fonts.display, fontSize: fontSizes.md, color: colors.text },
   taskMeta: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, marginTop: 2 },
   runButton: { minWidth: 72 },
+  policyRow: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  policyChip: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 999,
+    paddingHorizontal: spacing.sm,
+    paddingVertical: 6,
+    backgroundColor: colors.surface,
+  },
+  policyChipActive: { borderColor: colors.primary, backgroundColor: `${colors.primary}18` },
+  policyLabel: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, textTransform: 'capitalize' },
+  policyLabelActive: { color: colors.primary },
 });

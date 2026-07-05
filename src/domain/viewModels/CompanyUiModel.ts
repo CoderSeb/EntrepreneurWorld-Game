@@ -25,6 +25,16 @@ import {
 import { getLevelProgressRatio } from '@/domain/companies/CompanyProgressionService';
 import { describeIndustryBottleneck } from '@/domain/companies/IndustryMechanicsService';
 import {
+  getCompanyLifecyclePhase,
+  CompanyLifecyclePhase,
+} from '@/domain/companies/CompanyLifecycleService';
+import { describeActivityEffect } from '@/domain/companies/ActivityEffectService';
+import {
+  EXECUTIVE_AUTOMATION_POLICIES,
+  ExecutiveAutomationPolicy,
+  hasTaskAutomationActive,
+} from '@/domain/companies/ExecutivePolicyService';
+import {
   buildCompanyEconomyBreakdown,
   EconomyBreakdownLine,
 } from '@/domain/economy/EconomyBreakdownService';
@@ -78,6 +88,11 @@ export type CompanyUiModel = {
   marginalEmployeeProfitMinor: number;
   economyBreakdown: EconomyBreakdownLine[];
   bottleneckHint: string | null;
+  lifecyclePhase: CompanyLifecyclePhase;
+  automationPolicy: ExecutiveAutomationPolicy;
+  activeEffectSummaries: string[];
+  integrationDebtMinor: number;
+  integrationComplete: boolean;
 };
 
 export function industryColor(industryId: string, config?: EconomyConfig): string {
@@ -95,9 +110,7 @@ function companyHasTaskAutomation(
   config: EconomyConfig,
   nowUnix: number,
 ): boolean {
-  return config.managers.some(
-    (role) => role.automatesTasks && isExecutiveHired(company, role.id, nowUnix),
-  );
+  return hasTaskAutomationActive(company, config, nowUnix);
 }
 
 export function buildCompanyUiModel(
@@ -193,6 +206,11 @@ export function buildCompanyUiModel(
     ),
     economyBreakdown: economyBreakdown.lines,
     bottleneckHint: describeIndustryBottleneck(company, config),
+    lifecyclePhase: getCompanyLifecyclePhase(company),
+    automationPolicy: company.automationPolicy,
+    activeEffectSummaries: buildActiveEffectSummaries(company, config, nowUnix, translations),
+    integrationDebtMinor: company.integrationDebtMinor,
+    integrationComplete: company.integrationComplete,
   };
 }
 
@@ -228,9 +246,33 @@ export type TaskUiModel = {
   activityId: string;
   label: string;
   rewardMinor: number;
+  effectDescription: string | null;
   cooldownRemaining: number;
   ready: boolean;
 };
+
+function buildActiveEffectSummaries(
+  company: CompanyState,
+  config: EconomyConfig,
+  nowUnix: number,
+  translations?: TranslationDictionary,
+): string[] {
+  const activities = getActivitiesForKind(config, company.companyKind);
+  return company.activeEffects
+    .filter((effect) => effect.expiresAtUnix > nowUnix)
+    .map((effect) => {
+      const activity = activities.find((entry) => entry.id === effect.activityId);
+      if (!activity) {
+        return effect.activityId;
+      }
+      const label = translations ? getActivityLabel(activity.id, translations) : activity.displayName;
+      const description = describeActivityEffect(activity);
+      return description ? `${label}: ${description}` : label;
+    });
+}
+
+export { EXECUTIVE_AUTOMATION_POLICIES };
+export type { ExecutiveAutomationPolicy };
 
 export function buildTaskUiModels(
   appState: AppState,
@@ -257,6 +299,7 @@ export function buildTaskUiModels(
         activityId: activity.id,
         label: translations ? getActivityLabel(activity.id, translations) : activity.displayName,
         rewardMinor: activity.rewardMinor,
+        effectDescription: describeActivityEffect(activity),
         cooldownRemaining,
         ready: cooldownRemaining === 0,
       });

@@ -28,10 +28,21 @@ export type ActivityDefinition = {
 };
 
 export type IndustryMechanicsDefinition = {
-  primaryBottleneck: 'capacity' | 'retention' | 'none';
+  primaryBottleneck: 'capacity' | 'retention' | 'inventory' | 'none';
   capacityPerEmployeeMinor?: number;
+  inventoryBaseCapMinor?: number;
+  inventoryBonusPerMarketingLevel?: number;
   baseChurnRate?: number;
   retentionBonusPerQualityLevel?: number;
+};
+
+export type MarketSignalDefinition = {
+  id: string;
+  displayName: string;
+  predictedEventIds: string[];
+  leadTimeHours: number;
+  weight: number;
+  affectsIndustryIds: string[];
 };
 
 export type ManagerDefinition = {
@@ -94,6 +105,9 @@ export type AcquisitionTargetDefinition = {
   revenueBoostPerHourMinor: number;
   minBusinessRank: number;
   industryId: string;
+  integrationDebtMinor: number;
+  startingReputationPenalty: number;
+  riskPenalty: number;
 };
 
 export type IndustryDefinition = {
@@ -133,6 +147,7 @@ export type EconomyConfig = {
   activities: ActivityDefinition[];
   managers: ManagerDefinition[];
   marketEvents: MarketEventDefinition[];
+  marketSignals: MarketSignalDefinition[];
   automationLevels: AutomationLevelDefinition[];
   loanProducts: LoanProductDefinition[];
   upgradeTracks: UpgradeTrackDefinition[];
@@ -165,6 +180,17 @@ export function getActivity(config: EconomyConfig, activityId: string): Activity
 
 export function getManager(config: EconomyConfig, managerId: string): ManagerDefinition | null {
   return config.managers.find((m) => m.id === managerId) ?? null;
+}
+
+export function getMarketEvent(config: EconomyConfig, eventId: string): MarketEventDefinition | null {
+  return config.marketEvents.find((event) => event.id === eventId) ?? null;
+}
+
+export function getAcquisitionTarget(
+  config: EconomyConfig,
+  targetId: string,
+): AcquisitionTargetDefinition | null {
+  return config.acquisitionTargets.find((target) => target.id === targetId) ?? null;
 }
 
 export function getAutomationLevel(
@@ -228,6 +254,14 @@ type RawConfig = {
     weight: number;
     affects_industry_ids: string[];
   }>;
+  market_signals?: Array<{
+    id: string;
+    display_name: string;
+    predicted_event_ids: string[];
+    lead_time_hours: number;
+    weight: number;
+    affects_industry_ids: string[];
+  }>;
   automation_levels?: Array<{
     level: number;
     upgrade_cost_minor: number;
@@ -262,6 +296,9 @@ type RawConfig = {
     revenue_boost_per_hour_minor: number;
     min_business_rank: number;
     industry_id: string;
+    integration_debt_minor?: number;
+    starting_reputation_penalty?: number;
+    risk_penalty?: number;
   }>;
   industries?: Array<{
     id: string;
@@ -280,6 +317,8 @@ type RawConfig = {
     industry_mechanics?: {
       primary_bottleneck?: string;
       capacity_per_employee_minor?: number;
+      inventory_base_cap_minor?: number;
+      inventory_bonus_per_marketing_level?: number;
       base_churn_rate?: number;
       retention_bonus_per_quality_level?: number;
     };
@@ -366,6 +405,14 @@ export function parseEconomyConfig(data: RawConfig): EconomyConfig {
       weight: e.weight,
       affectsIndustryIds: e.affects_industry_ids ?? [],
     })),
+    marketSignals: (data.market_signals ?? []).map((signal) => ({
+      id: signal.id,
+      displayName: signal.display_name,
+      predictedEventIds: signal.predicted_event_ids ?? [],
+      leadTimeHours: signal.lead_time_hours,
+      weight: signal.weight,
+      affectsIndustryIds: signal.affects_industry_ids ?? [],
+    })),
     automationLevels: (data.automation_levels ?? []).map((l) => ({
       level: l.level,
       upgradeCostMinor: l.upgrade_cost_minor,
@@ -400,6 +447,9 @@ export function parseEconomyConfig(data: RawConfig): EconomyConfig {
       revenueBoostPerHourMinor: t.revenue_boost_per_hour_minor,
       minBusinessRank: t.min_business_rank,
       industryId: t.industry_id,
+      integrationDebtMinor: t.integration_debt_minor ?? 0,
+      startingReputationPenalty: t.starting_reputation_penalty ?? 0,
+      riskPenalty: t.risk_penalty ?? 0,
     })),
     industries,
   };
@@ -423,6 +473,8 @@ function parseIndustryMechanics(
   raw?: {
     primary_bottleneck?: string;
     capacity_per_employee_minor?: number;
+    inventory_base_cap_minor?: number;
+    inventory_bonus_per_marketing_level?: number;
     base_churn_rate?: number;
     retention_bonus_per_quality_level?: number;
   },
@@ -436,9 +488,18 @@ function parseIndustryMechanics(
     return undefined;
   }
 
+  let primaryBottleneck: IndustryMechanicsDefinition['primaryBottleneck'] = 'capacity';
+  if (bottleneck === 'retention') {
+    primaryBottleneck = 'retention';
+  } else if (bottleneck === 'inventory') {
+    primaryBottleneck = 'inventory';
+  }
+
   return {
-    primaryBottleneck: bottleneck === 'retention' ? 'retention' : 'capacity',
+    primaryBottleneck,
     capacityPerEmployeeMinor: raw.capacity_per_employee_minor,
+    inventoryBaseCapMinor: raw.inventory_base_cap_minor,
+    inventoryBonusPerMarketingLevel: raw.inventory_bonus_per_marketing_level,
     baseChurnRate: raw.base_churn_rate,
     retentionBonusPerQualityLevel: raw.retention_bonus_per_quality_level,
   };

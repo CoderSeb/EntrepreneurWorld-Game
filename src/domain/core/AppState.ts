@@ -2,8 +2,20 @@ import { PurchaseState, createPurchaseState, duplicatePurchaseState } from '@/do
 import { PlayerState, createPlayerState, duplicatePlayerState } from '@/domain/core/PlayerState';
 import { CompanyState, duplicateCompanyState, isSubsidiary } from '@/domain/core/CompanyState';
 
+export type MarketSignalPayload = {
+  id: string;
+  display_name: string;
+  predicted_event_id: string;
+  affects_industry_ids: string[];
+  visible_until_unix: number;
+  event_starts_at_unix: number;
+  expected_revenue_multiplier: number;
+  expected_expense_multiplier: number;
+};
+
 export type MarketState = {
   active_events?: MarketEventPayload[];
+  market_signals?: MarketSignalPayload[];
   [key: string]: unknown;
 };
 

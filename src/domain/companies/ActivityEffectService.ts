@@ -88,3 +88,21 @@ export function applyActivityEffect(
     effectApplied,
   };
 }
+
+export function describeActivityEffect(activity: ActivityDefinition): string | null {
+  if (activity.effectType === 'cash_reward' && activity.rewardMinor > 0) {
+    return `+${activity.rewardMinor}`;
+  }
+  if (activity.durationSeconds <= 0) {
+    return null;
+  }
+  const hours = Math.max(1, Math.round(activity.durationSeconds / 3600));
+  const pct = Math.round((activity.effectMultiplier - 1) * 100);
+  if (activity.effectType === 'temporary_revenue_multiplier') {
+    return pct >= 0 ? `+${pct}% rev · ${hours}h` : `${pct}% rev · ${hours}h`;
+  }
+  if (activity.effectType === 'temporary_expense_multiplier') {
+    return pct >= 0 ? `+${pct}% exp · ${hours}h` : `${pct}% exp · ${hours}h`;
+  }
+  return null;
+}

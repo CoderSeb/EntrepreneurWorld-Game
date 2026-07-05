@@ -1,7 +1,7 @@
 import { CompanyKinds } from '@/domain/core/CompanyKinds';
 import { MoneyValue } from '@/domain/money/MoneyValue';
 
-export const CURRENT_SCHEMA_VERSION = 9;
+export const CURRENT_SCHEMA_VERSION = 10;
 
 export type SaveData = {
   schemaVersion: number;
@@ -219,6 +219,30 @@ export function migrateSavePayload(rawPayload: Record<string, unknown>): Record<
         state.companies = companies;
         migrated.state = state;
         version = 9;
+        break;
+      }
+      case 9: {
+        const state = (migrated.state as Record<string, unknown>) ?? {};
+        const companies = (state.companies as Record<string, unknown>[]) ?? [];
+        for (const company of companies) {
+          if (!company.automation_policy) {
+            company.automation_policy = 'balanced';
+          }
+          if (company.integration_debt_minor === undefined) {
+            company.integration_debt_minor = 0;
+          }
+          if (company.integration_complete === undefined) {
+            company.integration_complete = true;
+          }
+        }
+        state.companies = companies;
+        const market = (state.market as Record<string, unknown>) ?? {};
+        if (!market.market_signals) {
+          market.market_signals = [];
+        }
+        state.market = market;
+        migrated.state = state;
+        version = 10;
         break;
       }
       default:

@@ -17,8 +17,11 @@ function makeSubsidiary(industryId: string, revenueMinor: number, expensesMinor:
     cashBalance: MoneyValue.zero(),
     reputation: 0,
     automationLevel: 0,
+    automationPolicy: 'balanced' as const,
     executiveContracts: {},
     activeEffects: [],
+    integrationDebtMinor: 0,
+    integrationComplete: true,
     lifetimeProfitMinor: 0,
     employeeCount: 0,
     payrollLevel: 1,
@@ -44,14 +47,14 @@ describe('EffectiveEconomyCalculator preferred track bonus', () => {
   });
 
   it('does not apply preferred bonus on non-preferred tracks', () => {
-    const company = makeSubsidiary('ecommerce', 140_000, 95_000);
-    const opsBonus = config.upgradeTracks.find((track) => track.id === 'operations')!.revenueBonusPerLevel;
+    const company = makeSubsidiary('auto_repair', 110_000, 75_000);
+    const marketingBonus = config.upgradeTracks.find((track) => track.id === 'marketing')!.revenueBonusPerLevel;
 
-    company.upgradeTrackLevels.operations = 1;
-    const withOps = getRevenuePerHour(company, config, {}).amountMinorUnits;
-    const trackOnly = Math.round(140_000 * (1 + opsBonus));
+    company.upgradeTrackLevels.marketing = 1;
+    const withMarketing = getRevenuePerHour(company, config, {}).amountMinorUnits;
+    const trackOnly = Math.round(110_000 * (1 + marketingBonus));
 
-    expect(withOps).toBe(trackOnly);
-    expect(withOps).toBeLessThan(Math.round(trackOnly * 1.08));
+    expect(withMarketing).toBe(trackOnly);
+    expect(withMarketing).toBeLessThan(Math.round(trackOnly * 1.08));
   });
 });

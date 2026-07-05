@@ -83,6 +83,28 @@ export type MarketEventViewModel = {
   affectedIndustryIds: string[];
 };
 
+export type MarketSignalViewModel = {
+  id: string;
+  displayName: string;
+  predictedEventId: string;
+  hoursUntilEvent: number;
+  expectedRevenueMultiplier: number;
+  expectedExpenseMultiplier: number;
+  global: boolean;
+  affectedIndustryIds: string[];
+};
+
+export type AcquisitionTargetViewModel = {
+  id: string;
+  displayName: string;
+  costMinor: number;
+  revenueBoostPerHourMinor: number;
+  minBusinessRank: number;
+  industryId: string;
+  integrationDebtMinor: number;
+  unlocked: boolean;
+};
+
 export function buildMarketViewModel(appState: AppState, nowUnix: number) {
   const events: MarketEventViewModel[] = [];
   for (const eventPayload of appState.marketState.active_events ?? []) {
@@ -99,5 +121,38 @@ export function buildMarketViewModel(appState: AppState, nowUnix: number) {
       affectedIndustryIds: affected,
     });
   }
-  return { events };
+
+  const signals: MarketSignalViewModel[] = [];
+  for (const signal of appState.marketState.market_signals ?? []) {
+    const hoursUntilEvent = Math.max(0, (signal.event_starts_at_unix - nowUnix) / 3600);
+    const affected = signal.affects_industry_ids ?? [];
+    signals.push({
+      id: signal.id,
+      displayName: signal.display_name,
+      predictedEventId: signal.predicted_event_id,
+      hoursUntilEvent,
+      expectedRevenueMultiplier: signal.expected_revenue_multiplier,
+      expectedExpenseMultiplier: signal.expected_expense_multiplier,
+      global: affected.length === 0,
+      affectedIndustryIds: affected,
+    });
+  }
+
+  return { events, signals };
+}
+
+export function buildAcquisitionTargetViewModels(
+  config: EconomyConfig,
+  businessRank: number,
+): AcquisitionTargetViewModel[] {
+  return config.acquisitionTargets.map((target) => ({
+    id: target.id,
+    displayName: target.displayName,
+    costMinor: target.costMinor,
+    revenueBoostPerHourMinor: target.revenueBoostPerHourMinor,
+    minBusinessRank: target.minBusinessRank,
+    industryId: target.industryId,
+    integrationDebtMinor: target.integrationDebtMinor,
+    unlocked: businessRank >= target.minBusinessRank,
+  }));
 }

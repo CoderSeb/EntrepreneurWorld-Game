@@ -26,6 +26,11 @@ import {
   getRevenueMultiplier,
 } from '@/domain/economy/MarketModifierCalculator';
 import {
+  getPolicyExpenseMultiplier,
+  getPolicyRevenueMultiplier,
+} from '@/domain/companies/ExecutivePolicyService';
+import { getIntegrationDebtExpensePerHourMinor } from '@/domain/companies/AcquisitionService';
+import {
   getExpenseMultiplier as getTrackExpenseMultiplier,
   getRevenueMultiplier as getTrackRevenueMultiplier,
 } from '@/domain/companies/UpgradeTrackService';
@@ -54,6 +59,7 @@ export function getRevenuePerHour(
   revenue = revenue.multiplyScalar(getPortfolioRevenueMultiplier(company, subsidiaries));
   revenue = revenue.multiplyScalar(getRevenueMultiplier(marketState, company.industryId));
   revenue = revenue.multiplyScalar(getActivityRevenueMultiplier(company, nowUnix));
+  revenue = revenue.multiplyScalar(getPolicyRevenueMultiplier(company, config, nowUnix));
   revenue = applyIndustryRevenueConstraints(company, config, revenue);
   return revenue;
 }
@@ -78,6 +84,8 @@ export function getExpensesPerHour(
   expenses = expenses.multiplyScalar(getTrackExpenseMultiplier(company, config));
   expenses = expenses.multiplyScalar(getExpenseMultiplier(marketState, company.industryId));
   expenses = expenses.multiplyScalar(getActivityExpenseMultiplier(company, nowUnix));
+  expenses = expenses.multiplyScalar(getPolicyExpenseMultiplier(company, config, nowUnix));
+  expenses = expenses.add(MoneyValue.fromMinor(getIntegrationDebtExpensePerHourMinor(company)));
   return expenses;
 }
 

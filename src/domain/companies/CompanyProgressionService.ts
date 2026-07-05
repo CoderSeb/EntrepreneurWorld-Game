@@ -3,13 +3,27 @@ import { AppState } from '@/domain/core/AppState';
 import { CompanyState, isHolding } from '@/domain/core/CompanyState';
 import { applyLevelUpgrade } from '@/domain/economy/UpgradeCalculator';
 import { getExpensesPerHour, getRevenuePerHour } from '@/domain/economy/EffectiveEconomyCalculator';
-import { expireExecutiveContracts, isExecutiveHired } from '@/domain/companies/ExecutiveContracts';
+import { expireExecutiveContracts } from '@/domain/companies/ExecutiveContracts';
 import { applyRankIfImproved } from '@/domain/progression/ProgressionService';
 import { applyActivityEffect } from '@/domain/companies/ActivityEffectService';
+import { accrueIntegrationDebtInterest } from '@/domain/companies/AcquisitionService';
+import {
+  getCompanyLifecyclePhase,
+  getLifecycleLevelThresholdMultiplier,
+  getLifecycleOrganicProfitMultiplier,
+} from '@/domain/companies/CompanyLifecycleService';
+import {
+  hasTaskAutomationActive,
+  shouldAutomateActivity,
+} from '@/domain/companies/ExecutivePolicyService';
 
 export function getAutoLevelThresholdMinor(company: CompanyState, baseRevenuePerHourMinor: number): number {
-  return Math.max(25_000, baseRevenuePerHourMinor * company.level * 8);
+  const phase = getCompanyLifecyclePhase(company);
+  const lifecycleMultiplier = getLifecycleLevelThresholdMultiplier(phase);
+  return Math.max(25_000, baseRevenuePerHourMinor * company.level * 8 * lifecycleMultiplier);
 }
+
+export { hasTaskAutomationActive };
 
 export function countAutomatedActivityRuns(
   readyAtUnix: number,
@@ -70,19 +84,6 @@ export function buildAutomationPeriodSegments(
   return segments;
 }
 
-export function hasTaskAutomationActive(
-  company: CompanyState,
-  config: EconomyConfig,
-  atUnix: number,
-): boolean {
-  return config.managers.some(
-    (role) =>
-      role.automatesTasks &&
-      role.appliesTo === company.companyKind &&
-      isExecutiveHired(company, role.id, atUnix),
-  );
-}
-
 export function processCompanyProgression(
   appState: AppState,
   config: EconomyConfig,
@@ -107,8 +108,13 @@ export function processCompanyProgression(
 
     const revenue = getRevenuePerHour(company, config, appState.marketState, subsidiaries, nowUnix);
     const expenses = getExpensesPerHour(company, config, appState.marketState, nowUnix);
-    const profitMinor = Math.max(0, revenue.subtract(expenses).amountMinorUnits * hours);
+    const lifecycleMultiplier = getLifecycleOrganicProfitMultiplier(getCompanyLifecyclePhase(company));
+    const profitMinor = Math.max(
+      0,
+      revenue.subtract(expenses).amountMinorUnits * hours * lifecycleMultiplier,
+    );
     company.lifetimeProfitMinor += Math.round(profitMinor);
+    accrueIntegrationDebtInterest(company, deltaSeconds);
 
     while (company.lifetimeProfitMinor >= getAutoLevelThresholdMinor(company, industry.baseRevenuePerHourMinor)) {
       company.lifetimeProfitMinor -= getAutoLevelThresholdMinor(company, industry.baseRevenuePerHourMinor);
@@ -141,6 +147,9 @@ function runAutomatedExecutiveTasks(
 
     for (const segment of segments) {
       if (!hasTaskAutomationActive(company, config, segment.startUnix)) {
+        continue;
+      }
+      if (!shouldAutomateActivity(company, activity, config, appState.marketState, segment.startUnix)) {
         continue;
       }
 

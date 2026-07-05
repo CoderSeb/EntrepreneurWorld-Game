@@ -1,5 +1,5 @@
 {
-  "version": 8,
+  "version": 9,
   "starting_cash_minor": 5000000,
   "holding_company_cost_minor": 2500000,
   "subsidiary_company_cost_minor": 2500000,
@@ -237,6 +237,39 @@
       "affects_industry_ids": ["real_estate"]
     }
   ],
+  "market_signals": [
+    {
+      "id": "energy_warning",
+      "display_name": "Energy prices rising",
+      "predicted_event_ids": ["energy_price_spike"],
+      "lead_time_hours": 6,
+      "weight": 8,
+      "affects_industry_ids": ["cafe", "auto_repair", "ecommerce"]
+    },
+    {
+      "id": "viral_rumor",
+      "display_name": "Viral trend building",
+      "predicted_event_ids": ["viral_campaign"],
+      "lead_time_hours": 4,
+      "weight": 6,
+      "affects_industry_ids": ["ecommerce", "cafe"]
+    },
+    {
+      "id": "tech_hype",
+      "display_name": "AI investment surge rumored",
+      "predicted_event_ids": ["ai_boom"],
+      "lead_time_hours": 8,
+      "weight": 5,
+      "affects_industry_ids": ["software"]
+    },
+    {
+      "id": "staff_pressure",
+      "display_name": "Labor market tightening",
+      "predicted_event_ids": ["staff_shortage"],
+      "lead_time_hours": 5,
+      "weight": 7
+    }
+  ],
   "automation_levels": [
     {
       "level": 1,
@@ -280,7 +313,10 @@
       "cost_minor": 1500000,
       "revenue_boost_per_hour_minor": 20000,
       "min_business_rank": 10,
-      "industry_id": "cafe"
+      "industry_id": "cafe",
+      "integration_debt_minor": 400000,
+      "starting_reputation_penalty": 0.15,
+      "risk_penalty": 0.05
     },
     {
       "id": "software_saas_bundle",
@@ -288,7 +324,10 @@
       "cost_minor": 3000000,
       "revenue_boost_per_hour_minor": 45000,
       "min_business_rank": 25,
-      "industry_id": "software"
+      "industry_id": "software",
+      "integration_debt_minor": 900000,
+      "starting_reputation_penalty": 0.2,
+      "risk_penalty": 0.08
     }
   ],
   "industries": [
@@ -324,7 +363,11 @@
       "base_expenses_per_hour_minor": 55000,
       "risk_profile": 0.35,
       "automation_potential": 0.35,
-      "min_business_rank": 1
+      "min_business_rank": 1,
+      "industry_mechanics": {
+        "primary_bottleneck": "capacity",
+        "capacity_per_employee_minor": 55000
+      }
     },
     {
       "id": "auto_repair",
@@ -354,7 +397,12 @@
       "base_expenses_per_hour_minor": 95000,
       "risk_profile": 0.55,
       "automation_potential": 0.75,
-      "min_business_rank": 5
+      "min_business_rank": 5,
+      "industry_mechanics": {
+        "primary_bottleneck": "inventory",
+        "inventory_base_cap_minor": 120000,
+        "inventory_bonus_per_marketing_level": 0.08
+      }
     },
     {
       "id": "software",

@@ -33,15 +33,19 @@ import {
 import { getActivity } from '@/domain/config/EconomyConfig';
 import { upgradeTrack } from '@/domain/companies/UpgradeTrackService';
 import { SimulationResult } from '@/domain/economy/SimulationResult';
-import { buildDashboardViewModel, buildMarketViewModel } from '@/domain/viewModels/ViewModels';
+import { buildDashboardViewModel, buildMarketViewModel, buildAcquisitionTargetViewModels } from '@/domain/viewModels/ViewModels';
 import {
   buildCompanyExecutiveRoles,
   buildCompanyUiModels,
   buildTaskUiModels,
   previewRevenuePerHourMinor,
+  EXECUTIVE_AUTOMATION_POLICIES,
+  ExecutiveAutomationPolicy,
 } from '@/domain/viewModels/CompanyUiModel';
+import { completeAcquisition, payIntegrationDebt } from '@/domain/companies/AcquisitionService';
+import { setCompanyAutomationPolicy } from '@/domain/companies/ExecutivePolicyService';
 import { findCompany } from '@/domain/core/AppState';
-import { OperationResult } from '@/domain/core/OperationResult';
+import { OperationResult, ok, fail } from '@/domain/core/OperationResult';
 import { SaveData } from '@/domain/save/SaveData';
 import * as SplashScreen from 'expo-splash-screen';
 import { colors } from '@/theme/tokens';
@@ -112,6 +116,7 @@ type GameContextValue = {
   lastSaveError: string | null;
   dashboard: ReturnType<typeof buildDashboardViewModel>;
   market: ReturnType<typeof buildMarketViewModel>;
+  acquisitions: ReturnType<typeof buildAcquisitionTargetViewModels>;
   companies: ReturnType<typeof buildCompanyUiModels>;
   tasks: ReturnType<typeof buildTaskUiModels>;
   offlineSummary: OfflineSummary | null;
@@ -125,6 +130,9 @@ type GameContextValue = {
   getCompanyExecutiveRoles: (companyId: string) => ReturnType<typeof buildCompanyExecutiveRoles>;
   upgradeCompanyTrack: (companyId: string, trackId: string) => OperationResult;
   upgradeCompanyAutomation: (companyId: string) => OperationResult;
+  setCompanyAutomationPolicy: (companyId: string, policy: ExecutiveAutomationPolicy) => OperationResult;
+  payCompanyIntegrationDebt: (companyId: string, amountMinor: number) => OperationResult;
+  completeAcquisition: (targetId: string, companyName: string) => OperationResult;
   borrowLoan: (productId: string, amountMinor: number) => OperationResult;
   repayLoanById: (loanId: string) => OperationResult;
   transferDividend: (subsidiaryId: string, amountMinor: number) => OperationResult;
@@ -390,6 +398,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       lastSaveError,
       dashboard,
       market: buildMarketViewModel(state, now),
+      acquisitions: buildAcquisitionTargetViewModels(config, state.player.businessRank),
       companies,
       tasks: buildTaskUiModels(state, config, now, strings),
       offlineSummary,
@@ -428,6 +437,22 @@ export function GameProvider({ children }: { children: ReactNode }) {
         mutate(() => upgradeTrack(state, companyId, trackId, config, now)),
       upgradeCompanyAutomation: (companyId) =>
         mutate(() => upgradeAutomation(state, config, companyId, now)),
+      setCompanyAutomationPolicy: (companyId, policy) =>
+        mutate(() => {
+          const company = findCompany(state, companyId);
+          if (!company) {
+            return fail('company_not_found', 'Company not found');
+          }
+          if (!EXECUTIVE_AUTOMATION_POLICIES.includes(policy)) {
+            return fail('invalid_policy', 'Unknown automation policy');
+          }
+          setCompanyAutomationPolicy(company, policy, now);
+          return ok(undefined);
+        }),
+      payCompanyIntegrationDebt: (companyId, amountMinor) =>
+        mutate(() => payIntegrationDebt(state, companyId, amountMinor)),
+      completeAcquisition: (targetId, companyName) =>
+        mutate(() => completeAcquisition(state, config, targetId, companyName, now)),
       borrowLoan: (productId, amountMinor) =>
         mutate(() => takeLoan(state, config, productId, amountMinor, now)),
       repayLoanById: (loanId) => mutate(() => repayLoan(state, loanId)),

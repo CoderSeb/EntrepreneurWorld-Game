@@ -14,7 +14,7 @@ describe('MarketEventService', () => {
   it('can activate global market events without crashing', () => {
     const appState = createAppState();
     const originalRandom = Math.random;
-    Math.random = () => 0;
+    Math.random = () => 0.9;
 
     try {
       refreshEvents(appState, config, 1_700_000_000);
