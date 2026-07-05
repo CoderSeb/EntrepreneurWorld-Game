@@ -83,7 +83,7 @@ describe('Industry mechanics in effective economy', () => {
       state.companies,
       1_000,
     );
-    expect(revenue.amountMinorUnits).toBeLessThanOrEqual(65_000);
+    expect(revenue.amountMinorUnits).toBeLessThanOrEqual(130_000);
   });
 
   it('applies real estate vacancy and leverage interest from expansion track', () => {

@@ -44,8 +44,10 @@ export function getLevelThresholdForPhase(
 ): number {
   const phase = getCompanyLifecyclePhase(company);
   return Math.max(
-    25_000,
-    baseRevenuePerHourMinor * company.level * 8 * getLifecycleLevelThresholdMultiplier(phase),
+    20_000,
+    Math.round(
+      baseRevenuePerHourMinor * company.level * 0.45 * getLifecycleLevelThresholdMultiplier(phase),
+    ),
   );
 }
 

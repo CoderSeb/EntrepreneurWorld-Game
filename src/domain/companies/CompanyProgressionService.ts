@@ -20,7 +20,10 @@ import {
 export function getAutoLevelThresholdMinor(company: CompanyState, baseRevenuePerHourMinor: number): number {
   const phase = getCompanyLifecyclePhase(company);
   const lifecycleMultiplier = getLifecycleLevelThresholdMultiplier(phase);
-  return Math.max(25_000, baseRevenuePerHourMinor * company.level * 8 * lifecycleMultiplier);
+  return Math.max(
+    20_000,
+    Math.round(baseRevenuePerHourMinor * company.level * 0.45 * lifecycleMultiplier),
+  );
 }
 
 export { hasTaskAutomationActive };

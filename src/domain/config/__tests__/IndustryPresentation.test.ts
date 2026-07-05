@@ -17,10 +17,10 @@ describe('IndustryPresentation', () => {
 
   it('derives stats line from industry economics', () => {
     const presentation = resolveIndustryPresentation(config.industries.cafe);
-    expect(presentation.marginPercent).toBe(42);
+    expect(presentation.marginPercent).toBe(52);
     expect(presentation.riskLabel).toBe('Low');
     expect(presentation.automationPercent).toBe(50);
-    expect(presentation.statsLine).toContain('42% margin');
+    expect(presentation.statsLine).toContain('52% margin');
   });
 
   it('falls back when optional UI fields are missing', () => {

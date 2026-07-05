@@ -27,7 +27,7 @@
   ],
   "rank_milestones": [
     { "rank": 1, "required_subsidiaries": 0, "required_net_worth_minor": 0 },
-    { "rank": 5, "required_subsidiaries": 1, "required_net_worth_minor": 3000000 },
+    { "rank": 5, "required_subsidiaries": 1, "required_net_worth_minor": 3050000 },
     { "rank": 10, "required_subsidiaries": 2, "required_net_worth_minor": 12000000 },
     { "rank": 25, "required_subsidiaries": 4, "required_net_worth_minor": 50000000 }
   ],
@@ -38,7 +38,7 @@
       "max_level": 5,
       "revenue_bonus_per_level": 0.05,
       "expense_bonus_per_level": 0.02,
-      "base_cost_minor": 60000,
+      "base_cost_minor": 4000,
       "cost_multiplier_per_level": 1.4
     },
     {
@@ -115,7 +115,7 @@
       "id": "ceo",
       "display_name": "CEO",
       "description": "Leads strategy and automates operational tasks.",
-      "hire_cost_minor": 100000,
+      "hire_cost_minor": 28000,
       "salary_per_hour_minor": 4000,
       "revenue_multiplier": 1.12,
       "expense_multiplier": 1.0,
@@ -341,13 +341,13 @@
       "preferred_track_id": "operations",
       "start_cost_minor": 2500000,
       "base_revenue_per_hour_minor": 120000,
-      "base_expenses_per_hour_minor": 70000,
+      "base_expenses_per_hour_minor": 58000,
       "risk_profile": 0.2,
       "automation_potential": 0.5,
       "min_business_rank": 1,
       "industry_mechanics": {
         "primary_bottleneck": "capacity",
-        "capacity_per_employee_minor": 65000
+        "capacity_per_employee_minor": 130000
       }
     },
     {
