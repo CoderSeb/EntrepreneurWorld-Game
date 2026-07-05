@@ -30,9 +30,6 @@ export default function HqScreen() {
               {interpolate(t.hq.subtitle, { rank: dashboard.businessRank })}
             </Text>
           </View>
-          <View style={styles.credits}>
-            <Text style={styles.creditsText}>{formatMoneyCompact(dashboard.playerCash.amountMinorUnits)}</Text>
-          </View>
         </View>
       }>
       {offlineSummary ? (
@@ -125,15 +122,6 @@ const styles = StyleSheet.create({
   headerTitleBlock: { flex: 1, flexShrink: 1 },
   congName: { fontFamily: fonts.display, fontSize: fontSizes.lg, color: colors.primary, fontWeight: '900' },
   subtitle: { fontFamily: fonts.mono, fontSize: fontSizes.micro, color: colors.muted, letterSpacing: 2, marginTop: 2 },
-  credits: {
-    backgroundColor: `${colors.warning}18`,
-    borderColor: `${colors.warning}36`,
-    borderWidth: 1,
-    borderRadius: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  creditsText: { fontFamily: fonts.mono, fontSize: fontSizes.md, color: colors.warning, fontWeight: '600' },
   cardLabel: { fontFamily: fonts.mono, fontSize: fontSizes.xs, color: colors.muted, letterSpacing: 1.5, marginBottom: 4 },
   heroValue: { fontFamily: fonts.display, fontSize: fontSizes.hero, color: colors.primary, fontWeight: '900' },
   offlineValue: { fontFamily: fonts.display, fontSize: fontSizes.xxl, color: colors.success, fontWeight: '800' },

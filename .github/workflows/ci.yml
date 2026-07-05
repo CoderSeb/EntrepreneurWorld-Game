@@ -7,20 +7,21 @@ on:
     branches: [main, develop]
 
 jobs:
-  mobile:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: '20'
+          cache: npm
 
-      - name: Mobile tests
-        shell: pwsh
-        run: pwsh ./scripts/run-mobile-tests.ps1
+      - name: Install dependencies
+        run: npm ci
 
-      - name: npm audit (informational)
-        shell: pwsh
-        continue-on-error: true
-        run: npm audit --audit-level=high
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test -- --ci
