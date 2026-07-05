@@ -37,3 +37,18 @@ export function getLifecycleOrganicProfitMultiplier(phase: CompanyLifecyclePhase
       return 1;
   }
 }
+
+export function getLevelThresholdForPhase(
+  company: CompanyState,
+  baseRevenuePerHourMinor: number,
+): number {
+  const phase = getCompanyLifecyclePhase(company);
+  return Math.max(
+    25_000,
+    baseRevenuePerHourMinor * company.level * 8 * getLifecycleLevelThresholdMultiplier(phase),
+  );
+}
+
+export function getOrganicProfitMultiplier(company: CompanyState): number {
+  return getLifecycleOrganicProfitMultiplier(getCompanyLifecyclePhase(company));
+}

@@ -382,7 +382,11 @@
       "base_expenses_per_hour_minor": 75000,
       "risk_profile": 0.35,
       "automation_potential": 0.45,
-      "min_business_rank": 5
+      "min_business_rank": 5,
+      "industry_mechanics": {
+        "primary_bottleneck": "capacity",
+        "capacity_per_employee_minor": 58000
+      }
     },
     {
       "id": "ecommerce",

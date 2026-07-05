@@ -15,6 +15,8 @@ import { colors, spacing } from '@/theme/tokens';
 import { fonts, fontSizes } from '@/theme/typography';
 import { MAX_PAYROLL_LEVEL, MIN_PAYROLL_LEVEL } from '@/domain/companies/EmployeeService';
 import { EXECUTIVE_AUTOMATION_POLICIES } from '@/domain/viewModels/CompanyUiModel';
+import { getAutomationPolicyLabel } from '@/i18n/policyLabels';
+import { ExecutiveAutomationPolicy } from '@/domain/companies/ExecutivePolicyService';
 
 export default function CompanyDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -162,12 +164,14 @@ export default function CompanyDetailScreen() {
     ? formatBottleneckHint(company.bottleneckHint, t, formatMoneyCompact)
     : null;
 
-  const handlePolicyChange = (policy: typeof company.automationPolicy) => {
+  const handlePolicyChange = (policy: ExecutiveAutomationPolicy) => {
     if (!company.hasTaskAutomation) {
       return;
     }
     setCompanyAutomationPolicy(company.id, policy);
   };
+
+  const selectedPolicyDescription = getAutomationPolicyLabel(company.automationPolicy, t);
 
   const handlePayIntegration = () => {
     const payment = Math.min(company.integrationDebtMinor, company.cashBalanceMinor);
@@ -271,6 +275,7 @@ export default function CompanyDetailScreen() {
               </Pressable>
             ))}
           </View>
+          <Text style={styles.healthMeta}>{selectedPolicyDescription}</Text>
         </>
       ) : null}
 
